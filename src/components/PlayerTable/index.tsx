@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useDebounce } from '@/hooks/useDebounce'
 import {
   ColumnDef,
   SortingState,
@@ -28,13 +29,15 @@ import { Player } from '@/types'
 import { exportToCSV, exportToJSON } from './export-utils'
 import { PlayerFilters } from './PlayerFilters'
 import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
+import { VirtualizedTable } from './VirtualizedTable'
 
 export function PlayerTable() {
-  const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores } = useAppStore()
+  const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress } = useAppStore()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [globalFilter, setGlobalFilter] = useState('')
+  const debouncedGlobalFilter = useDebounce(globalFilter, 300)
   const [pageSize, setPageSize] = useState(50)
   
   // Get visible roles from selected roles
@@ -222,7 +225,7 @@ export function PlayerTable() {
       sorting,
       columnFilters,
       columnVisibility,
-      globalFilter,
+      globalFilter: debouncedGlobalFilter,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -264,13 +267,23 @@ export function PlayerTable() {
           </div>
           <div className="flex gap-2">
             {selectedRoles.length > 0 && (
-              <Button
-                onClick={calculateScores}
-                disabled={isCalculating}
-                variant="default"
-              >
-                {isCalculating ? 'Calculating...' : 'Calculate Scores'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={calculateScores}
+                  disabled={isCalculating}
+                  variant="default"
+                >
+                  {isCalculating ? `Calculating... ${calculationProgress}%` : 'Calculate Scores'}
+                </Button>
+                {isCalculating && (
+                  <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300 ease-out"
+                      style={{ width: `${calculationProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
             )}
             <Button
               variant="outline"
@@ -308,60 +321,64 @@ export function PlayerTable() {
           <ColumnVisibilityToggle table={table} />
         </div>
 
-        {/* Table */}
-        <div className="rounded-md border">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="px-4 py-3 text-left text-sm font-medium"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-t transition-colors hover:bg-muted/50"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-3 text-sm">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
+        {/* Table - Use virtualization for large datasets */}
+        {table.getFilteredRowModel().rows.length > 100 ? (
+          <VirtualizedTable table={table} />
+        ) : (
+          <div className="rounded-md border">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-4 py-3 text-left text-sm font-medium"
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </th>
                       ))}
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={columns.length}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      No results found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="border-t transition-colors hover:bg-muted/50"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-4 py-3 text-sm">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={columns.length}
+                        className="h-24 text-center text-muted-foreground"
+                      >
+                        No results found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Pagination */}
         <div className="flex items-center justify-between">

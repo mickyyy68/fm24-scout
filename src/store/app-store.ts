@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Player, Role } from '@/types'
 import { DataManager } from '@/lib/data-manager'
+import { OptimizedDataManager } from '@/lib/data-manager-optimized'
 
 interface AppState {
   // State
@@ -10,6 +11,7 @@ interface AppState {
   visibleRoleColumns: string[] // Role codes that should be shown in table
   isLoading: boolean
   isCalculating: boolean
+  calculationProgress: number
   
   // Actions
   setPlayers: (players: Player[]) => void
@@ -23,6 +25,7 @@ interface AppState {
 }
 
 const dataManager = new DataManager()
+const optimizedDataManager = new OptimizedDataManager()
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -32,6 +35,7 @@ export const useAppStore = create<AppState>()(
       visibleRoleColumns: [],
       isLoading: false,
       isCalculating: false,
+      calculationProgress: 0,
 
       setPlayers: (players) => {
         set({ players })
@@ -70,19 +74,37 @@ export const useAppStore = create<AppState>()(
       },
 
       calculateScores: async () => {
-        set({ isCalculating: true })
+        set({ isCalculating: true, calculationProgress: 0 })
         
         const { players, selectedRoles } = get()
         
-        const playersWithScores = await dataManager.calculateAllScores(
-          players,
-          selectedRoles.map(r => r.code)
-        )
-        
-        set({ 
-          players: playersWithScores,
-          isCalculating: false 
-        })
+        try {
+          // Use optimized manager with Web Worker
+          const playersWithScores = await optimizedDataManager.calculateAllScoresOptimized(
+            players,
+            selectedRoles.map(r => r.code),
+            (progress) => set({ calculationProgress: progress })
+          )
+          
+          set({ 
+            players: playersWithScores,
+            isCalculating: false,
+            calculationProgress: 100
+          })
+        } catch (error) {
+          console.error('Score calculation failed:', error)
+          // Fallback to original synchronous calculation
+          const playersWithScores = await dataManager.calculateAllScores(
+            players,
+            selectedRoles.map(r => r.code)
+          )
+          
+          set({ 
+            players: playersWithScores,
+            isCalculating: false,
+            calculationProgress: 100
+          })
+        }
       },
 
       clearAll: () => {
