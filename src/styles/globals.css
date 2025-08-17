@@ -3,12 +3,12 @@
 @layer base {
   :root {
     /* LIGHT (complementare allo screenshot) */
-    --background: hsl(245 30% 98%);
-    --foreground: hsl(245 15% 10%);
-    --card: hsl(245 28% 100%);
-    --card-foreground: hsl(245 15% 10%);
-    --popover: hsl(245 28% 100%);
-    --popover-foreground: hsl(245 15% 10%);
+    --background: hsl(245 20% 98%);
+    --foreground: hsl(245 25% 8%);
+    --card: hsl(245 20% 100%);
+    --card-foreground: hsl(245 25% 8%);
+    --popover: hsl(245 20% 100%);
+    --popover-foreground: hsl(245 25% 8%);
 
     /* CTA viola ispirato al tasto CONTINUE */
     --primary: hsl(256 54% 40%);
@@ -16,7 +16,7 @@
 
     /* Neutri freddi come i pannelli laterali */
     --secondary: hsl(240 15% 94%);
-    --secondary-foreground: hsl(245 15% 12%);
+    --secondary-foreground: hsl(245 25% 10%);
 
     /* Stati e tag "Set" in verde brillante */
     --accent: hsl(122 45% 46%);
@@ -24,7 +24,7 @@
 
     /* Testi attenuati e superfici "muted" */
     --muted: hsl(240 12% 92%);
-    --muted-foreground: hsl(240 8% 45%);
+    --muted-foreground: hsl(240 10% 35%);
 
     /* Distruttivo (non nello screenshot, ma utile per UI) */
     --destructive: hsl(358 72% 54%);
@@ -44,11 +44,11 @@
 
     /* Sidebar chiara (variante light) */
     --sidebar: hsl(240 15% 96%);
-    --sidebar-foreground: hsl(245 15% 12%);
+    --sidebar-foreground: hsl(245 25% 10%);
     --sidebar-primary: hsl(256 54% 40%);
     --sidebar-primary-foreground: hsl(0 0% 100%);
     --sidebar-accent: hsl(240 12% 92%);
-    --sidebar-accent-foreground: hsl(245 15% 12%);
+    --sidebar-accent-foreground: hsl(245 25% 10%);
     --sidebar-border: hsl(240 12% 86%);
     --sidebar-ring: hsl(245 14% 46%);
 
