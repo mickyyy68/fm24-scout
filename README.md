@@ -62,16 +62,26 @@ FM24 Scout App is a powerful desktop application designed to help Football Manag
 
 ## 🚀 Installation
 
-### Prerequisites
+### 📥 Download Pre-built Releases (Recommended)
+
+**[⬇️ Download Latest Release](https://github.com/mickyyy68/fm24-scout-app/releases/latest)**
+
+Choose your platform:
+- **Windows**: Download `FM24-Scout-App_x64-setup.exe` 
+- **macOS Intel**: Download `FM24-Scout-App_x64.dmg`
+- **macOS Apple Silicon**: Download `FM24-Scout-App_aarch64.dmg`
+- **Linux**: Download `fm24-scout-app_amd64.AppImage`
+
+### 🔧 Build from Source
+
+Prerequisites:
 - Node.js 18+ and npm/yarn
 - Rust (for Tauri development)
 - Git
 
-### Quick Start
-
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/fm24-scout-app.git
+git clone https://github.com/mickyyy68/fm24-scout-app.git
 cd fm24-scout-app
 
 # Install dependencies
@@ -274,7 +284,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Support
 
 For issues, questions, or suggestions:
-- Open an issue on [GitHub](https://github.com/yourusername/fm24-scout-app/issues)
+- Open an issue on [GitHub](https://github.com/mickyyy68/fm24-scout-app/issues)
 - Check the [documentation](./docs)
 
 ---

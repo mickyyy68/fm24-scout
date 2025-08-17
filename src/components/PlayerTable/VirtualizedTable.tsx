@@ -21,9 +21,6 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
   const virtualItems = virtualizer.getVirtualItems()
   const totalSize = virtualizer.getTotalSize()
   
-  // Calculate which columns are visible for optimization
-  const visibleColumns = table.getVisibleFlatColumns()
-  
   return (
     <div 
       ref={parentRef} 
