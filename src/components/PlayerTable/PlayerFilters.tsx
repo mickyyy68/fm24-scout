@@ -1,0 +1,158 @@
+import { useState } from 'react'
+import { Table } from '@tanstack/react-table'
+import { Filter, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Player } from '@/types'
+
+interface PlayerFiltersProps {
+  table: Table<Player>
+}
+
+export function PlayerFilters({ table }: PlayerFiltersProps) {
+  const [filters, setFilters] = useState<Record<string, string>>({})
+
+  const applyFilter = (column: string, value: string) => {
+    if (value) {
+      table.getColumn(column)?.setFilterValue(value)
+      setFilters(prev => ({ ...prev, [column]: value }))
+    } else {
+      table.getColumn(column)?.setFilterValue(undefined)
+      setFilters(prev => {
+        const newFilters = { ...prev }
+        delete newFilters[column]
+        return newFilters
+      })
+    }
+  }
+
+  const clearFilters = () => {
+    table.getAllColumns().forEach(column => {
+      column.setFilterValue(undefined)
+    })
+    setFilters({})
+  }
+
+  const activeFiltersCount = Object.keys(filters).length
+
+  return (
+    <div className="flex items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {activeFiltersCount > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {activeFiltersCount}
+              </Badge>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-80 p-4">
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Position</label>
+              <Input
+                placeholder="e.g., ST, AM"
+                value={filters.Position || ''}
+                onChange={(e) => applyFilter('Position', e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Club</label>
+              <Input
+                placeholder="Club name"
+                value={filters.Club || ''}
+                onChange={(e) => applyFilter('Club', e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Min Age</label>
+              <Input
+                type="number"
+                placeholder="15"
+                value={filters.minAge || ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value) {
+                    const currentFilter = table.getColumn('Age')?.getFilterValue() as any || {}
+                    table.getColumn('Age')?.setFilterValue({
+                      ...currentFilter,
+                      min: parseInt(value)
+                    })
+                    setFilters(prev => ({ ...prev, minAge: value }))
+                  } else {
+                    const currentFilter = table.getColumn('Age')?.getFilterValue() as any || {}
+                    const { min, ...rest } = currentFilter
+                    if (Object.keys(rest).length > 0) {
+                      table.getColumn('Age')?.setFilterValue(rest)
+                    } else {
+                      table.getColumn('Age')?.setFilterValue(undefined)
+                    }
+                    setFilters(prev => {
+                      const { minAge, ...rest } = prev
+                      return rest
+                    })
+                  }
+                }}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Max Age</label>
+              <Input
+                type="number"
+                placeholder="40"
+                value={filters.maxAge || ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value) {
+                    const currentFilter = table.getColumn('Age')?.getFilterValue() as any || {}
+                    table.getColumn('Age')?.setFilterValue({
+                      ...currentFilter,
+                      max: parseInt(value)
+                    })
+                    setFilters(prev => ({ ...prev, maxAge: value }))
+                  } else {
+                    const currentFilter = table.getColumn('Age')?.getFilterValue() as any || {}
+                    const { max, ...rest } = currentFilter
+                    if (Object.keys(rest).length > 0) {
+                      table.getColumn('Age')?.setFilterValue(rest)
+                    } else {
+                      table.getColumn('Age')?.setFilterValue(undefined)
+                    }
+                    setFilters(prev => {
+                      const { maxAge, ...rest } = prev
+                      return rest
+                    })
+                  }
+                }}
+                className="mt-1"
+              />
+            </div>
+            {activeFiltersCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="w-full"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}

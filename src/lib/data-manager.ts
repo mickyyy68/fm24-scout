@@ -74,7 +74,7 @@ export class DataManager {
       })
       
       // Find best role from selected
-      let bestRole: RoleScore | null = null
+      let bestRole: RoleScore | undefined = undefined
       Object.entries(roleScores).forEach(([code, score]) => {
         const role = this.getRoleByCode(code)
         if (role && (!bestRole || score > bestRole.score)) {

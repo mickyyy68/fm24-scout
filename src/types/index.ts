@@ -7,6 +7,7 @@ export interface Player {
   Position: string
   
   // Contract
+  Value?: string
   'Transfer Value'?: string
   Wage?: string
   
@@ -28,6 +29,7 @@ export interface Player {
   Agg: number
   Ant: number
   Bra: number
+  Com: number
   Cmp: number
   Cnt: number
   Dec: number
