@@ -44,7 +44,7 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
           className="sticky top-0 z-10 bg-background border-b"
           style={{ position: 'sticky', top: 0 }}
         >
-          <table className="w-full">
+          <table className="w-full" style={{ tableLayout: 'fixed' }}>
             <thead className="bg-muted/50">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -78,7 +78,7 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
             transform: `translateY(${virtualItems[0]?.start ?? 0}px)`,
           }}
         >
-          <table className="w-full">
+          <table className="w-full" style={{ tableLayout: 'fixed' }}>
             <tbody>
               {virtualItems.map((virtualRow) => {
                 const row = rows[virtualRow.index]
