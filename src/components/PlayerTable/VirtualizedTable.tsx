@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Table, flexRender } from '@tanstack/react-table'
 import { Player } from '@/types'
@@ -9,7 +9,17 @@ interface VirtualizedTableProps {
 
 export function VirtualizedTable({ table }: VirtualizedTableProps) {
   const parentRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
   const { rows } = table.getRowModel()
+  
+  // Measure header height
+  useEffect(() => {
+    if (headerRef.current) {
+      const height = headerRef.current.getBoundingClientRect().height
+      setHeaderHeight(height)
+    }
+  }, [table.getHeaderGroups()])
   
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -27,9 +37,10 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
       className="h-[600px] overflow-auto rounded-md border"
       style={{ contain: 'strict' }}
     >
-      <div style={{ height: `${totalSize}px`, width: '100%', position: 'relative' }}>
+      <div style={{ height: `${totalSize + headerHeight}px`, width: '100%', position: 'relative' }}>
         {/* Sticky Header */}
         <div 
+          ref={headerRef}
           className="sticky top-0 z-10 bg-background border-b"
           style={{ position: 'sticky', top: 0 }}
         >
@@ -61,7 +72,7 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
         <div
           style={{
             position: 'absolute',
-            top: 0,
+            top: headerHeight,
             left: 0,
             width: '100%',
             transform: `translateY(${virtualItems[0]?.start ?? 0}px)`,
