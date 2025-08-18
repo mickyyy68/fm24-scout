@@ -21,8 +21,9 @@ export class FileParser {
     // Extract headers
     headerRow.querySelectorAll('th, td').forEach(cell => {
       let text = cell.textContent?.trim() || ''
-      // Map common abbreviations
+      // Map common abbreviations and field names
       if (text === 'Nat') text = 'Nationality'
+      if (text === 'Transfer Value') text = 'Value'
       headers.push(text)
     })
     
