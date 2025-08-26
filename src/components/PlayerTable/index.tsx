@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   ColumnDef,
@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUpDown, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,15 +30,49 @@ import { exportToCSV, exportToJSON } from './export-utils'
 import { PlayerFilters } from './PlayerFilters'
 import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
+import { Slider } from '@/components/ui/slider'
+
+// Zoom configuration constants
+const ZOOM_CONFIG = {
+  MIN: 50,
+  MAX: 200,
+  STEP: 10,
+  DEFAULT: 100,
+  DEBOUNCE_MS: 100,
+  VIRTUALIZATION_THRESHOLD: 100, // Number of rows before using virtualized table
+} as const
 
 export function PlayerTable() {
-  const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress } = useAppStore()
+  const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress, tableZoom, setTableZoom } = useAppStore()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [globalFilter, setGlobalFilter] = useState('')
   const debouncedGlobalFilter = useDebounce(globalFilter, 300)
   const [pageSize, setPageSize] = useState(50)
+  const debouncedZoom = useDebounce(tableZoom, ZOOM_CONFIG.DEBOUNCE_MS) // Debounce zoom for smooth performance
+  
+  // Keyboard shortcuts for zoom control
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault()
+          setTableZoom(Math.min(ZOOM_CONFIG.MAX, tableZoom + ZOOM_CONFIG.STEP))
+        } else if (e.key === '-') {
+          e.preventDefault()
+          setTableZoom(Math.max(ZOOM_CONFIG.MIN, tableZoom - ZOOM_CONFIG.STEP))
+        } else if (e.key === '0') {
+          e.preventDefault()
+          setTableZoom(ZOOM_CONFIG.DEFAULT)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [tableZoom, setTableZoom])
   
   // Get visible roles from selected roles
   const visibleRoles = selectedRoles.filter(role => 
@@ -319,15 +353,86 @@ export function PlayerTable() {
           </div>
           <PlayerFilters table={table} />
           <ColumnVisibilityToggle table={table} />
+          
+          {/* Zoom Controls */}
+          <div 
+            className="flex items-center gap-2 min-w-[200px]"
+            role="group"
+            aria-label="Table zoom controls"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTableZoom(Math.max(ZOOM_CONFIG.MIN, tableZoom - ZOOM_CONFIG.STEP))}
+              disabled={tableZoom <= ZOOM_CONFIG.MIN}
+              title="Zoom out (Ctrl+-)"
+              aria-label={`Zoom out (Current: ${tableZoom}%)`}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <Slider
+              value={[tableZoom]}
+              onValueChange={(value) => setTableZoom(value[0])}
+              max={ZOOM_CONFIG.MAX}
+              min={ZOOM_CONFIG.MIN}
+              step={ZOOM_CONFIG.STEP}
+              className="w-[100px]"
+              aria-label="Table zoom level"
+              aria-valuetext={`${tableZoom}% zoom`}
+              aria-valuenow={tableZoom}
+              aria-valuemin={ZOOM_CONFIG.MIN}
+              aria-valuemax={ZOOM_CONFIG.MAX}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTableZoom(Math.min(ZOOM_CONFIG.MAX, tableZoom + ZOOM_CONFIG.STEP))}
+              disabled={tableZoom >= ZOOM_CONFIG.MAX}
+              title="Zoom in (Ctrl++)"
+              aria-label={`Zoom in (Current: ${tableZoom}%)`}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <span 
+              className="text-sm text-muted-foreground min-w-[45px]"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {tableZoom}%
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTableZoom(ZOOM_CONFIG.DEFAULT)}
+              title="Reset zoom (Ctrl+0)"
+              aria-label={`Reset zoom to ${ZOOM_CONFIG.DEFAULT}%`}
+              className="h-8 w-8 p-0"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Keyboard shortcuts hint */}
+          <span className="text-xs text-muted-foreground">
+            Ctrl+/- to zoom
+          </span>
         </div>
 
         {/* Table - Use virtualization for large datasets */}
-        {table.getFilteredRowModel().rows.length > 100 ? (
-          <VirtualizedTable table={table} />
+        {table.getFilteredRowModel().rows.length > ZOOM_CONFIG.VIRTUALIZATION_THRESHOLD ? (
+          <VirtualizedTable table={table} zoom={debouncedZoom} />
         ) : (
           <div className="rounded-md border">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table 
+                className="w-full"
+                style={{
+                  transform: `scale(${debouncedZoom / 100})`,
+                  transformOrigin: 'top left',
+                  width: `${100 / (debouncedZoom / 100)}%`
+                }}>
                 <thead className="bg-muted/50">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>

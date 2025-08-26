@@ -3,11 +3,19 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { Table, flexRender } from '@tanstack/react-table'
 import { Player } from '@/types'
 
+// Configuration constants
+const TABLE_CONFIG = {
+  BASE_ROW_HEIGHT: 48,
+  OVERSCAN_COUNT: 10, // Number of extra rows to render outside viewport
+  DEFAULT_ZOOM: 100,
+} as const
+
 interface VirtualizedTableProps {
   table: Table<Player>
+  zoom?: number
 }
 
-export function VirtualizedTable({ table }: VirtualizedTableProps) {
+export function VirtualizedTable({ table, zoom = TABLE_CONFIG.DEFAULT_ZOOM }: VirtualizedTableProps) {
   const parentRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const [headerHeight, setHeaderHeight] = useState(0)
@@ -24,8 +32,8 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: useCallback(() => 48, []), // Estimated row height
-    overscan: 10, // Render 10 extra rows outside viewport
+    estimateSize: useCallback(() => TABLE_CONFIG.BASE_ROW_HEIGHT, []), // Keep row height constant - zoom is applied via transform
+    overscan: TABLE_CONFIG.OVERSCAN_COUNT, // Render extra rows outside viewport
   })
 
   const virtualItems = virtualizer.getVirtualItems()
@@ -44,7 +52,14 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
           className="sticky top-0 z-10 bg-background border-b"
           style={{ position: 'sticky', top: 0 }}
         >
-          <table className="w-full" style={{ tableLayout: 'fixed' }}>
+          <table 
+            className="w-full" 
+            style={{ 
+              tableLayout: 'fixed',
+              transform: `scale(${zoom / 100})`,
+              transformOrigin: 'top left',
+              width: `${100 / (zoom / 100)}%`
+            }}>
             <thead className="bg-muted/50">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -78,7 +93,14 @@ export function VirtualizedTable({ table }: VirtualizedTableProps) {
             transform: `translateY(${virtualItems[0]?.start ?? 0}px)`,
           }}
         >
-          <table className="w-full" style={{ tableLayout: 'fixed' }}>
+          <table 
+            className="w-full" 
+            style={{ 
+              tableLayout: 'fixed',
+              transform: `scale(${zoom / 100})`,
+              transformOrigin: 'top left',
+              width: `${100 / (zoom / 100)}%`
+            }}>
             <tbody>
               {virtualItems.map((virtualRow) => {
                 const row = rows[virtualRow.index]

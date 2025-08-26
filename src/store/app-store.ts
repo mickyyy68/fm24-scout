@@ -4,6 +4,13 @@ import { Player, Role } from '@/types'
 import { DataManager } from '@/lib/data-manager'
 import { OptimizedDataManager } from '@/lib/data-manager-optimized'
 
+// Zoom configuration constants
+const ZOOM_LIMITS = {
+  MIN: 50,
+  MAX: 200,
+  DEFAULT: 100,
+} as const
+
 interface AppState {
   // State
   players: Player[]
@@ -12,6 +19,7 @@ interface AppState {
   isLoading: boolean
   isCalculating: boolean
   calculationProgress: number
+  tableZoom: number // Zoom level percentage (50-200)
   
   // Actions
   setPlayers: (players: Player[]) => void
@@ -22,6 +30,7 @@ interface AppState {
   setVisibleRoleColumns: (codes: string[]) => void
   calculateScores: () => Promise<void>
   clearAll: () => void
+  setTableZoom: (zoom: number) => void
 }
 
 const dataManager = new DataManager()
@@ -36,6 +45,7 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       isCalculating: false,
       calculationProgress: 0,
+      tableZoom: ZOOM_LIMITS.DEFAULT,
 
       setPlayers: (players) => {
         set({ players })
@@ -115,12 +125,24 @@ export const useAppStore = create<AppState>()(
           isLoading: false,
           isCalculating: false
         })
+      },
+
+      setTableZoom: (zoom) => {
+        // Validate input
+        if (typeof zoom !== 'number' || isNaN(zoom) || !isFinite(zoom)) {
+          console.warn('Invalid zoom value:', zoom)
+          return
+        }
+        // Clamp zoom within limits
+        const clampedZoom = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, zoom))
+        set({ tableZoom: clampedZoom })
       }
     }),
     {
       name: 'fm24-scout-storage',
       partialize: (state) => ({
-        selectedRoles: state.selectedRoles
+        selectedRoles: state.selectedRoles,
+        tableZoom: state.tableZoom
       })
     }
   )

@@ -42,6 +42,17 @@ FM24 Scout App is a powerful desktop application designed to help Football Manag
 - **Column Visibility**: Show/hide specific data columns
 - **Smart Sorting**: Sort by any column including calculated scores
 
+### 🔍 Table Zoom Controls
+- **Adjustable Data Size**: Zoom from 50% to 200% for optimal viewing
+- **Multiple Control Methods**:
+  - Interactive slider with visual feedback
+  - Click zoom in/out buttons for 10% increments
+  - Keyboard shortcuts: `Ctrl+/Cmd+` (zoom in), `Ctrl-/Cmd-` (zoom out), `Ctrl+0/Cmd+0` (reset)
+- **Smooth Performance**: Debounced updates prevent lag during adjustments
+- **Smart Layout**: Automatic width compensation ensures table fills container at any zoom level
+- **Persistent Settings**: Zoom preference saved between sessions
+- **Full Accessibility**: ARIA labels and screen reader support
+
 ### 🎨 Football Manager-Inspired Design
 - **Authentic FM Theme**: Purple CTAs and green accents matching FM24's aesthetic
 - **Dark/Light Modes**: Full theme support with optimized contrast
@@ -141,6 +152,10 @@ npm run tauri build -- --target x86_64-unknown-linux-gnu
 - **Sort**: Click any column header to sort
 - **Filter**: Use the Filters dropdown for age, position, club
 - **Search**: Type in the search box for instant results
+- **Zoom**: Adjust table data size using:
+  - Slider control (50% to 200%)
+  - Zoom buttons for quick adjustments
+  - Keyboard shortcuts: `Ctrl/Cmd + Plus/Minus/0`
 - **Export**: Download filtered results as CSV or JSON
 
 ### 4. Compare Players
@@ -257,6 +272,7 @@ User preferences are persisted in:
 ### Customization
 - Theme preference (dark/light)
 - Selected roles persist between sessions
+- Table zoom level (50% to 200%)
 - Window size and position remembered
 
 ## 🤝 Contributing
