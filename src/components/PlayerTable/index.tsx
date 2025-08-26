@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+import { ArrowUpDown, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Copy, UserPlus, UserCheck } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,12 +25,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAppStore } from '@/store/app-store'
+import { useSquadStore } from '@/store/squad-store'
 import { Player } from '@/types'
 import { exportToCSV, exportToJSON } from './export-utils'
 import { PlayerFilters } from './PlayerFilters'
 import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
 import { Slider } from '@/components/ui/slider'
+import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
 
 // Zoom configuration constants
 const ZOOM_CONFIG = {
@@ -44,6 +46,7 @@ const ZOOM_CONFIG = {
 
 export function PlayerTable() {
   const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress, tableZoom, setTableZoom } = useAppStore()
+  const { isPlayerInSquad } = useSquadStore()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -51,6 +54,8 @@ export function PlayerTable() {
   const debouncedGlobalFilter = useDebounce(globalFilter, 300)
   const [pageSize, setPageSize] = useState(50)
   const debouncedZoom = useDebounce(tableZoom, ZOOM_CONFIG.DEBOUNCE_MS) // Debounce zoom for smooth performance
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   
   // Keyboard shortcuts for zoom control
   useEffect(() => {
@@ -93,9 +98,47 @@ export function PlayerTable() {
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="font-medium">{row.getValue('Name')}</div>
-        ),
+        cell: ({ row }) => {
+          const player = row.original
+          const inSquad = isPlayerInSquad(player.Name)
+          
+          const handleCopyName = () => {
+            navigator.clipboard.writeText(player.Name)
+          }
+          
+          const handleAddToSquad = () => {
+            setSelectedPlayer(player)
+            setIsAssignModalOpen(true)
+          }
+          
+          return (
+            <div className="flex items-center gap-2">
+              <div className="font-medium flex-1">{player.Name}</div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleCopyName}
+                title="Copy name"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleAddToSquad}
+                title={inSquad ? "Already in squad" : "Add to squad"}
+              >
+                {inSquad ? (
+                  <UserCheck className="h-3 w-3 text-green-500" />
+                ) : (
+                  <UserPlus className="h-3 w-3" />
+                )}
+              </Button>
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'Age',
@@ -289,7 +332,8 @@ export function PlayerTable() {
   }
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -536,5 +580,16 @@ export function PlayerTable() {
         </div>
       </CardContent>
     </Card>
+    
+    {/* Player Assignment Modal */}
+    <PlayerAssignModal
+      player={selectedPlayer}
+      open={isAssignModalOpen}
+      onClose={() => {
+        setIsAssignModalOpen(false)
+        setSelectedPlayer(null)
+      }}
+    />
+    </>
   )
 }

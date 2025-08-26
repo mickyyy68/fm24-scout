@@ -86,3 +86,6 @@ export interface RoleScore {
   name: string
   score: number
 }
+
+// Re-export squad types
+export * from './squad'
