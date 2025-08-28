@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -7,6 +7,8 @@ import { Users, X, Search, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { Player } from '@/types'
 import { cn } from '@/lib/utils'
+import { RadarChart } from '@/components/charts/RadarChart'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export function PlayerComparison() {
   const { players } = useAppStore()
@@ -62,6 +64,10 @@ export function PlayerComparison() {
     { key: 'Wor', name: 'Work Rate' },
   ]
 
+  const [attrSet, setAttrSet] = useState<'Physical' | 'Technical' | 'Mental' | 'Custom'>('Physical')
+  const [customKeys, setCustomKeys] = useState<string>('Acc, Pac, Sta, Str, Agi, Bal, Jum')
+  const parsedCustomKeys = useMemo(() => customKeys.split(',').map(s => s.trim()).filter(Boolean) as any, [customKeys])
+
   if (comparedPlayers.length === 0 && !showSearch) {
     return (
       <Card>
@@ -105,6 +111,38 @@ export function PlayerComparison() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Radar Chart */}
+        {comparedPlayers.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Attribute Radar</div>
+              <div className="flex items-center gap-2">
+                <Select value={attrSet} onValueChange={(v) => setAttrSet(v as any)}>
+                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Physical">Physical</SelectItem>
+                    <SelectItem value="Technical">Technical</SelectItem>
+                    <SelectItem value="Mental">Mental</SelectItem>
+                    <SelectItem value="Custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                {attrSet === 'Custom' && (
+                  <Input
+                    value={customKeys}
+                    onChange={(e) => setCustomKeys(e.target.value)}
+                    placeholder="Comma-separated keys (e.g., Acc, Pac, Sta)"
+                    className="w-[300px]"
+                  />
+                )}
+              </div>
+            </div>
+            <RadarChart 
+              players={comparedPlayers} 
+              attributeSet={attrSet as any} 
+              customKeys={parsedCustomKeys}
+            />
+          </div>
+        )}
         {/* Player Selection */}
         {(showSearch || comparedPlayers.length > 0) && comparedPlayers.length < 4 && (
           <div className="space-y-2">

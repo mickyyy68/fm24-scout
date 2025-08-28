@@ -33,6 +33,11 @@ import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
 import { Slider } from '@/components/ui/slider'
 import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
+import { PresetsMenu } from './PresetsMenu'
+import { QueryBuilderButton } from './QueryBuilderButton'
+import { useFilterStore } from '@/store/filter-store'
+import { evaluateGroup } from '@/lib/query'
+import type { QueryGroup, QueryRule, NumericRule } from '@/types'
 
 // Zoom configuration constants
 const ZOOM_CONFIG = {
@@ -49,13 +54,55 @@ export function PlayerTable() {
   const { isPlayerInSquad } = useSquadStore()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  // Hidden attribute columns for column-native filtering support
+  const NUMERIC_ATTR_KEYS = useMemo(() => [
+    // Technical
+    'Cor','Cro','Dri','Fin','Fir','Fla','Hea','Lon','Mar','Pas','Tck','Tec',
+    // Mental
+    'Agg','Ant','Bra','Com','Cmp','Cnt','Dec','Det','Ldr','OtB','Pos','Tea','Vis','Wor',
+    // Physical
+    'Acc','Agi','Bal','Jum','Pac','Sta','Str',
+    // GK
+    '1v1','Aer','Cmd','Han','Kic','Ref','TRO','Thr',
+    // Derived
+    'Speed','WorkRate','SetPieces',
+  ] as const, [])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    const initial: VisibilityState = { queryMatch: false }
+    ;(NUMERIC_ATTR_KEYS as readonly string[]).forEach((k) => { initial[k] = false })
+    return initial
+  })
   const [globalFilter, setGlobalFilter] = useState('')
+  const { currentQuery } = useFilterStore()
   const debouncedGlobalFilter = useDebounce(globalFilter, 300)
   const [pageSize, setPageSize] = useState(50)
   const debouncedZoom = useDebounce(tableZoom, ZOOM_CONFIG.DEBOUNCE_MS) // Debounce zoom for smooth performance
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  
+  // Helper: determine if query can be mirrored into native column filters (best UX)
+  const isMirrorableNumericAND = useCallback((group: QueryGroup | null | undefined) => {
+    if (!group || !Array.isArray(group.rules) || group.rules.length === 0) return false
+    if (group.op !== 'AND') return false
+    // flat list of numeric rules only
+    return group.rules.every((r: any) => r && (r as QueryRule).type === 'numeric' && !(r as any).op)
+  }, [])
+
+  const mapNumericToFilterValue = useCallback((rule: NumericRule) => {
+    switch (rule.operator) {
+      case '>=': return { min: rule.value }
+      case '<=': return { max: rule.value }
+      case '>': return { min: Math.floor(rule.value) + 1 }
+      case '<': return { max: Math.ceil(rule.value) - 1 }
+      case '=': return { min: rule.value, max: rule.value }
+      case 'between': {
+        const a = rule.value
+        const b = rule.value2 ?? rule.value
+        return { min: Math.min(a, b), max: Math.max(a, b) }
+      }
+      default: return undefined as any
+    }
+  }, [])
   
   // Keyboard shortcuts for zoom control
   useEffect(() => {
@@ -87,6 +134,19 @@ export function PlayerTable() {
   // Define columns dynamically based on selected roles
   const columns = useMemo<ColumnDef<Player>[]>(() => {
     const baseColumns: ColumnDef<Player>[] = [
+      // Hidden column used to apply advanced query filtering (AND/OR)
+      {
+        id: 'queryMatch',
+        accessorFn: () => true,
+        enableHiding: false,
+        enableSorting: false,
+        header: () => null,
+        cell: () => null,
+        filterFn: (row) => {
+          // If there is no current query, allow all
+          return evaluateGroup(row.original, currentQuery ?? null)
+        }
+      },
       {
         accessorKey: 'Name',
         header: ({ column }) => (
@@ -241,6 +301,33 @@ export function PlayerTable() {
       },
     ]
 
+    // Numeric attribute columns (hidden, filterable programmatically)
+    const attributeColumns: ColumnDef<Player>[] = (NUMERIC_ATTR_KEYS as readonly string[]).map((key) => ({
+      id: key,
+      accessorFn: (row) => {
+        if (key === 'Speed') return (((row.Pac ?? 0) as number) + ((row.Acc ?? 0) as number)) / 2
+        if (key === 'WorkRate') return (((row.Wor ?? 0) as number) + ((row.Sta ?? 0) as number)) / 2
+        if (key === 'SetPieces') return (((row.Cor ?? 0) as number) + ((row.Thr ?? 0) as number)) / 2
+        return Number((row as any)[key] ?? 0)
+      },
+      enableHiding: false, // keep out of Columns menu to avoid clutter
+      enableSorting: false,
+      header: () => null,
+      cell: () => null,
+      filterFn: (row, id, value) => {
+        const v = Number(row.getValue(id) ?? 0)
+        if (value == null) return true
+        if (typeof value === 'number') return v >= value
+        if (typeof value === 'object') {
+          const { min, max } = value as any
+          if (min != null && max != null) return v >= min && v <= max
+          if (min != null) return v >= min
+          if (max != null) return v <= max
+        }
+        return true
+      },
+    }))
+
     // Add role score columns
     const roleColumns: ColumnDef<Player>[] = visibleRoles.map(role => ({
       id: `role_${role.code}`,
@@ -292,8 +379,8 @@ export function PlayerTable() {
       },
     }] : []
 
-    return [...baseColumns, ...roleColumns, ...bestRoleColumn]
-  }, [visibleRoles])
+    return [...baseColumns, ...attributeColumns, ...roleColumns, ...bestRoleColumn]
+  }, [visibleRoles, currentQuery, NUMERIC_ATTR_KEYS])
 
   const table = useReactTable({
     data: players,
@@ -318,6 +405,41 @@ export function PlayerTable() {
       },
     },
   })
+
+  // Toggle the query filter column based on currentQuery presence
+  useEffect(() => {
+    const col = table.getColumn('queryMatch')
+    if (!col) return
+    const mirrorable = isMirrorableNumericAND(currentQuery as any)
+    if (!mirrorable && currentQuery && (currentQuery.rules?.length ?? 0) > 0) {
+      col.setFilterValue('active')
+    } else {
+      col.setFilterValue(undefined)
+    }
+  }, [currentQuery, table, isMirrorableNumericAND])
+
+  // Mirror simple numeric AND rules into native column filters for best UX
+  useEffect(() => {
+    const mirrorable = isMirrorableNumericAND(currentQuery as any)
+    const existing = table.getState().columnFilters as ColumnFiltersState
+    // Remove any previous numeric filters we control
+    const idsToClear = new Set<string>(['Age', ...(NUMERIC_ATTR_KEYS as readonly string[])])
+    const base = existing.filter((f) => !idsToClear.has(String((f as any).id)))
+
+    if (!mirrorable) {
+      if (base.length !== existing.length) {
+        table.setColumnFilters(base)
+      }
+      return
+    }
+
+    const numericRules = (currentQuery?.rules ?? []) as NumericRule[]
+    const mirrored: ColumnFiltersState = numericRules.map((r) => ({
+      id: r.field as any,
+      value: mapNumericToFilterValue(r) as any,
+    }))
+    table.setColumnFilters([...base, ...mirrored])
+  }, [currentQuery, table, NUMERIC_ATTR_KEYS, isMirrorableNumericAND, mapNumericToFilterValue])
 
   const handleExportCSV = useCallback(() => {
     exportToCSV(table.getFilteredRowModel().rows.map(r => r.original), visibleRoles)
@@ -396,6 +518,14 @@ export function PlayerTable() {
             />
           </div>
           <PlayerFilters table={table} />
+          <QueryBuilderButton />
+          <PresetsMenu 
+            table={table}
+            globalText={globalFilter}
+            setGlobalText={setGlobalFilter}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
+          />
           <ColumnVisibilityToggle table={table} />
           
           {/* Zoom Controls */}
