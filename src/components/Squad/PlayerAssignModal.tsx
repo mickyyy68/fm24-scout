@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Player, PlayerStatus, POSITION_DISPLAY_NAMES, SquadPosition } from '@/types'
+import { Player, PlayerStatus, POSITION_DISPLAY_NAMES } from '@/types'
 import { useSquadStore } from '@/store/squad-store'
 import { DataManager } from '@/lib/data-manager'
 import {

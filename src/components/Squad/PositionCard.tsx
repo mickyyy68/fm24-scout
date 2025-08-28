@@ -32,7 +32,7 @@ interface PositionCardProps {
 
 export function PositionCard({ 
   position, 
-  onEditPosition,
+  onEditPosition: _onEditPosition,
   onAddPlayer,
   className 
 }: PositionCardProps) {

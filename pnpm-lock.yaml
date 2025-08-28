@@ -108,6 +108,9 @@ importers:
         specifier: ^5.0.7
         version: 5.0.8(@types/react@19.1.11)(react@19.1.1)
     devDependencies:
+      '@fontsource-variable/figtree':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.8.3
@@ -409,6 +412,9 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@fontsource-variable/figtree@5.2.8':
+    resolution: {integrity: sha512-T1X/m2Yw0nKSlbBmaPdZR9Ed1I0cXZVIGc6kScyo9wgyxtGXR+bawboP+W2DHNMHWz90JEz1IAEPQ5bcNprn0w==}
 
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
@@ -1859,6 +1865,8 @@ snapshots:
       react-dom: 19.1.1(react@19.1.1)
 
   '@floating-ui/utils@0.2.10': {}
+
+  '@fontsource-variable/figtree@5.2.8': {}
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:

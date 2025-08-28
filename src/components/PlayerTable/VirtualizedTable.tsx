@@ -53,7 +53,7 @@ export function VirtualizedTable({ table, zoom = TABLE_CONFIG.DEFAULT_ZOOM }: Vi
           style={{ position: 'sticky', top: 0 }}
         >
           <table 
-            className="w-full" 
+            className="w-full tabular-nums" 
             style={{ 
               tableLayout: 'fixed',
               transform: `scale(${zoom / 100})`,
@@ -94,7 +94,7 @@ export function VirtualizedTable({ table, zoom = TABLE_CONFIG.DEFAULT_ZOOM }: Vi
           }}
         >
           <table 
-            className="w-full" 
+            className="w-full tabular-nums" 
             style={{ 
               tableLayout: 'fixed',
               transform: `scale(${zoom / 100})`,

@@ -45,6 +45,7 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
+    "@fontsource-variable/figtree": "^5.2.8",
     "@tauri-apps/cli": "^2",
     "@types/papaparse": "^5.3.16",
     "@types/react": "^19.1.8",

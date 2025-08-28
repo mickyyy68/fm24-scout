@@ -212,7 +212,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-center">{row.getValue('Age')}</div>
+          <div className="text-center tabular-nums">{row.getValue('Age')}</div>
         ),
         filterFn: (row, id, value) => {
           const age = row.getValue(id) as number
@@ -281,7 +281,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-right font-medium">{row.getValue('Value')}</div>
+          <div className="text-right font-medium tabular-nums">{row.getValue('Value')}</div>
         ),
       },
       {
@@ -296,7 +296,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-right">{row.getValue('Wage')}</div>
+          <div className="text-right tabular-nums">{row.getValue('Wage')}</div>
         ),
       },
     ]
@@ -345,7 +345,7 @@ export function PlayerTable() {
         const score = row.original.roleScores?.[role.code] || 0
         const isBest = row.original.bestRole?.code === role.code
         return (
-          <div className={`text-center ${isBest ? 'font-bold text-primary' : ''}`}>
+          <div className={`text-center tabular-nums font-medium ${isBest ? 'font-bold text-primary' : ''}`}>
             {score.toFixed(1)}
           </div>
         )
@@ -373,7 +373,7 @@ export function PlayerTable() {
             <Badge variant="default" className="mb-1">
               {bestRole.name}
             </Badge>
-            <div className="text-sm font-semibold">{bestRole.score.toFixed(1)}</div>
+            <div className="text-sm font-medium tabular-nums">{bestRole.score.toFixed(1)}</div>
           </div>
         )
       },
@@ -601,7 +601,7 @@ export function PlayerTable() {
           <div className="rounded-md border">
             <div className="overflow-x-auto">
               <table 
-                className="w-full"
+                className="w-full tabular-nums"
                 style={{
                   transform: `scale(${debouncedZoom / 100})`,
                   transformOrigin: 'top left',

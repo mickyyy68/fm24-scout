@@ -107,11 +107,7 @@ export function Squad() {
     setSelectedPosition(position)
   }
   
-  const handleAddPlayerToPosition = () => {
-    if (selectedPosition) {
-      setIsAssignModalOpen(true)
-    }
-  }
+  // Note: Position-specific "Add Player" action is handled inline where used
   
   return (
     <div className="space-y-6">

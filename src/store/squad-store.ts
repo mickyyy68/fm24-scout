@@ -330,7 +330,7 @@ export const useSquadStore = create<SquadState>()(
       },
       
       applyPlayerUpdate: (update) => {
-        const importedPlayers = [] // This would come from the app store in practice
+        const importedPlayers: Player[] = [] // This would come from the app store in practice
         const playerToUpdate = importedPlayers.find(p => p.Name === update.playerName)
         
         if (playerToUpdate) {
