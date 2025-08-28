@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   ColumnDef,
@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUpDown, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Copy, UserPlus, UserCheck } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,20 +25,106 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAppStore } from '@/store/app-store'
+import { useSquadStore } from '@/store/squad-store'
 import { Player } from '@/types'
 import { exportToCSV, exportToJSON } from './export-utils'
 import { PlayerFilters } from './PlayerFilters'
 import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
+import { Slider } from '@/components/ui/slider'
+import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
+import { PresetsMenu } from './PresetsMenu'
+import { QueryBuilderButton } from './QueryBuilderButton'
+import { useFilterStore } from '@/store/filter-store'
+import { evaluateGroup } from '@/lib/query'
+import type { QueryGroup, QueryRule, NumericRule } from '@/types'
+
+// Zoom configuration constants
+const ZOOM_CONFIG = {
+  MIN: 50,
+  MAX: 200,
+  STEP: 10,
+  DEFAULT: 100,
+  DEBOUNCE_MS: 100,
+  VIRTUALIZATION_THRESHOLD: 100, // Number of rows before using virtualized table
+} as const
 
 export function PlayerTable() {
-  const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress } = useAppStore()
+  const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress, tableZoom, setTableZoom } = useAppStore()
+  const { isPlayerInSquad } = useSquadStore()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  // Hidden attribute columns for column-native filtering support
+  const NUMERIC_ATTR_KEYS = useMemo(() => [
+    // Technical
+    'Cor','Cro','Dri','Fin','Fir','Fla','Hea','Lon','Mar','Pas','Tck','Tec',
+    // Mental
+    'Agg','Ant','Bra','Com','Cmp','Cnt','Dec','Det','Ldr','OtB','Pos','Tea','Vis','Wor',
+    // Physical
+    'Acc','Agi','Bal','Jum','Pac','Sta','Str',
+    // GK
+    '1v1','Aer','Cmd','Han','Kic','Ref','TRO','Thr',
+    // Derived
+    'Speed','WorkRate','SetPieces',
+  ] as const, [])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    const initial: VisibilityState = { queryMatch: false }
+    ;(NUMERIC_ATTR_KEYS as readonly string[]).forEach((k) => { initial[k] = false })
+    return initial
+  })
   const [globalFilter, setGlobalFilter] = useState('')
+  const { currentQuery } = useFilterStore()
   const debouncedGlobalFilter = useDebounce(globalFilter, 300)
   const [pageSize, setPageSize] = useState(50)
+  const debouncedZoom = useDebounce(tableZoom, ZOOM_CONFIG.DEBOUNCE_MS) // Debounce zoom for smooth performance
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  
+  // Helper: determine if query can be mirrored into native column filters (best UX)
+  const isMirrorableNumericAND = useCallback((group: QueryGroup | null | undefined) => {
+    if (!group || !Array.isArray(group.rules) || group.rules.length === 0) return false
+    if (group.op !== 'AND') return false
+    // flat list of numeric rules only
+    return group.rules.every((r: any) => r && (r as QueryRule).type === 'numeric' && !(r as any).op)
+  }, [])
+
+  const mapNumericToFilterValue = useCallback((rule: NumericRule) => {
+    switch (rule.operator) {
+      case '>=': return { min: rule.value }
+      case '<=': return { max: rule.value }
+      case '>': return { min: Math.floor(rule.value) + 1 }
+      case '<': return { max: Math.ceil(rule.value) - 1 }
+      case '=': return { min: rule.value, max: rule.value }
+      case 'between': {
+        const a = rule.value
+        const b = rule.value2 ?? rule.value
+        return { min: Math.min(a, b), max: Math.max(a, b) }
+      }
+      default: return undefined as any
+    }
+  }, [])
+  
+  // Keyboard shortcuts for zoom control
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault()
+          setTableZoom(Math.min(ZOOM_CONFIG.MAX, tableZoom + ZOOM_CONFIG.STEP))
+        } else if (e.key === '-') {
+          e.preventDefault()
+          setTableZoom(Math.max(ZOOM_CONFIG.MIN, tableZoom - ZOOM_CONFIG.STEP))
+        } else if (e.key === '0') {
+          e.preventDefault()
+          setTableZoom(ZOOM_CONFIG.DEFAULT)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [tableZoom, setTableZoom])
   
   // Get visible roles from selected roles
   const visibleRoles = selectedRoles.filter(role => 
@@ -48,6 +134,19 @@ export function PlayerTable() {
   // Define columns dynamically based on selected roles
   const columns = useMemo<ColumnDef<Player>[]>(() => {
     const baseColumns: ColumnDef<Player>[] = [
+      // Hidden column used to apply advanced query filtering (AND/OR)
+      {
+        id: 'queryMatch',
+        accessorFn: () => true,
+        enableHiding: false,
+        enableSorting: false,
+        header: () => null,
+        cell: () => null,
+        filterFn: (row) => {
+          // If there is no current query, allow all
+          return evaluateGroup(row.original, currentQuery ?? null)
+        }
+      },
       {
         accessorKey: 'Name',
         header: ({ column }) => (
@@ -59,9 +158,47 @@ export function PlayerTable() {
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="font-medium">{row.getValue('Name')}</div>
-        ),
+        cell: ({ row }) => {
+          const player = row.original
+          const inSquad = isPlayerInSquad(player.Name)
+          
+          const handleCopyName = () => {
+            navigator.clipboard.writeText(player.Name)
+          }
+          
+          const handleAddToSquad = () => {
+            setSelectedPlayer(player)
+            setIsAssignModalOpen(true)
+          }
+          
+          return (
+            <div className="flex items-center gap-2">
+              <div className="font-medium flex-1">{player.Name}</div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleCopyName}
+                title="Copy name"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleAddToSquad}
+                title={inSquad ? "Already in squad" : "Add to squad"}
+              >
+                {inSquad ? (
+                  <UserCheck className="h-3 w-3 text-green-500" />
+                ) : (
+                  <UserPlus className="h-3 w-3" />
+                )}
+              </Button>
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'Age',
@@ -75,7 +212,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-center">{row.getValue('Age')}</div>
+          <div className="text-center tabular-nums">{row.getValue('Age')}</div>
         ),
         filterFn: (row, id, value) => {
           const age = row.getValue(id) as number
@@ -144,7 +281,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-right font-medium">{row.getValue('Value')}</div>
+          <div className="text-right font-medium tabular-nums">{row.getValue('Value')}</div>
         ),
       },
       {
@@ -159,10 +296,37 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-right">{row.getValue('Wage')}</div>
+          <div className="text-right tabular-nums">{row.getValue('Wage')}</div>
         ),
       },
     ]
+
+    // Numeric attribute columns (hidden, filterable programmatically)
+    const attributeColumns: ColumnDef<Player>[] = (NUMERIC_ATTR_KEYS as readonly string[]).map((key) => ({
+      id: key,
+      accessorFn: (row) => {
+        if (key === 'Speed') return (((row.Pac ?? 0) as number) + ((row.Acc ?? 0) as number)) / 2
+        if (key === 'WorkRate') return (((row.Wor ?? 0) as number) + ((row.Sta ?? 0) as number)) / 2
+        if (key === 'SetPieces') return (((row.Cor ?? 0) as number) + ((row.Thr ?? 0) as number)) / 2
+        return Number((row as any)[key] ?? 0)
+      },
+      enableHiding: false, // keep out of Columns menu to avoid clutter
+      enableSorting: false,
+      header: () => null,
+      cell: () => null,
+      filterFn: (row, id, value) => {
+        const v = Number(row.getValue(id) ?? 0)
+        if (value == null) return true
+        if (typeof value === 'number') return v >= value
+        if (typeof value === 'object') {
+          const { min, max } = value as any
+          if (min != null && max != null) return v >= min && v <= max
+          if (min != null) return v >= min
+          if (max != null) return v <= max
+        }
+        return true
+      },
+    }))
 
     // Add role score columns
     const roleColumns: ColumnDef<Player>[] = visibleRoles.map(role => ({
@@ -181,7 +345,7 @@ export function PlayerTable() {
         const score = row.original.roleScores?.[role.code] || 0
         const isBest = row.original.bestRole?.code === role.code
         return (
-          <div className={`text-center ${isBest ? 'font-bold text-primary' : ''}`}>
+          <div className={`text-center tabular-nums font-medium ${isBest ? 'font-bold text-primary' : ''}`}>
             {score.toFixed(1)}
           </div>
         )
@@ -209,14 +373,14 @@ export function PlayerTable() {
             <Badge variant="default" className="mb-1">
               {bestRole.name}
             </Badge>
-            <div className="text-sm font-semibold">{bestRole.score.toFixed(1)}</div>
+            <div className="text-sm font-medium tabular-nums">{bestRole.score.toFixed(1)}</div>
           </div>
         )
       },
     }] : []
 
-    return [...baseColumns, ...roleColumns, ...bestRoleColumn]
-  }, [visibleRoles])
+    return [...baseColumns, ...attributeColumns, ...roleColumns, ...bestRoleColumn]
+  }, [visibleRoles, currentQuery, NUMERIC_ATTR_KEYS])
 
   const table = useReactTable({
     data: players,
@@ -242,6 +406,41 @@ export function PlayerTable() {
     },
   })
 
+  // Toggle the query filter column based on currentQuery presence
+  useEffect(() => {
+    const col = table.getColumn('queryMatch')
+    if (!col) return
+    const mirrorable = isMirrorableNumericAND(currentQuery as any)
+    if (!mirrorable && currentQuery && (currentQuery.rules?.length ?? 0) > 0) {
+      col.setFilterValue('active')
+    } else {
+      col.setFilterValue(undefined)
+    }
+  }, [currentQuery, table, isMirrorableNumericAND])
+
+  // Mirror simple numeric AND rules into native column filters for best UX
+  useEffect(() => {
+    const mirrorable = isMirrorableNumericAND(currentQuery as any)
+    const existing = table.getState().columnFilters as ColumnFiltersState
+    // Remove any previous numeric filters we control
+    const idsToClear = new Set<string>(['Age', ...(NUMERIC_ATTR_KEYS as readonly string[])])
+    const base = existing.filter((f) => !idsToClear.has(String((f as any).id)))
+
+    if (!mirrorable) {
+      if (base.length !== existing.length) {
+        table.setColumnFilters(base)
+      }
+      return
+    }
+
+    const numericRules = (currentQuery?.rules ?? []) as NumericRule[]
+    const mirrored: ColumnFiltersState = numericRules.map((r) => ({
+      id: r.field as any,
+      value: mapNumericToFilterValue(r) as any,
+    }))
+    table.setColumnFilters([...base, ...mirrored])
+  }, [currentQuery, table, NUMERIC_ATTR_KEYS, isMirrorableNumericAND, mapNumericToFilterValue])
+
   const handleExportCSV = useCallback(() => {
     exportToCSV(table.getFilteredRowModel().rows.map(r => r.original), visibleRoles)
   }, [visibleRoles])
@@ -255,7 +454,8 @@ export function PlayerTable() {
   }
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -318,16 +518,95 @@ export function PlayerTable() {
             />
           </div>
           <PlayerFilters table={table} />
+          <QueryBuilderButton />
+          <PresetsMenu 
+            table={table}
+            globalText={globalFilter}
+            setGlobalText={setGlobalFilter}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
+          />
           <ColumnVisibilityToggle table={table} />
+          
+          {/* Zoom Controls */}
+          <div 
+            className="flex items-center gap-2 min-w-[200px]"
+            role="group"
+            aria-label="Table zoom controls"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTableZoom(Math.max(ZOOM_CONFIG.MIN, tableZoom - ZOOM_CONFIG.STEP))}
+              disabled={tableZoom <= ZOOM_CONFIG.MIN}
+              title="Zoom out (Ctrl+-)"
+              aria-label={`Zoom out (Current: ${tableZoom}%)`}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <Slider
+              value={[tableZoom]}
+              onValueChange={(value) => setTableZoom(value[0])}
+              max={ZOOM_CONFIG.MAX}
+              min={ZOOM_CONFIG.MIN}
+              step={ZOOM_CONFIG.STEP}
+              className="w-[100px]"
+              aria-label="Table zoom level"
+              aria-valuetext={`${tableZoom}% zoom`}
+              aria-valuenow={tableZoom}
+              aria-valuemin={ZOOM_CONFIG.MIN}
+              aria-valuemax={ZOOM_CONFIG.MAX}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTableZoom(Math.min(ZOOM_CONFIG.MAX, tableZoom + ZOOM_CONFIG.STEP))}
+              disabled={tableZoom >= ZOOM_CONFIG.MAX}
+              title="Zoom in (Ctrl++)"
+              aria-label={`Zoom in (Current: ${tableZoom}%)`}
+              className="h-8 w-8 p-0"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <span 
+              className="text-sm text-muted-foreground min-w-[45px]"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {tableZoom}%
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTableZoom(ZOOM_CONFIG.DEFAULT)}
+              title="Reset zoom (Ctrl+0)"
+              aria-label={`Reset zoom to ${ZOOM_CONFIG.DEFAULT}%`}
+              className="h-8 w-8 p-0"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Keyboard shortcuts hint */}
+          <span className="text-xs text-muted-foreground">
+            Ctrl+/- to zoom
+          </span>
         </div>
 
         {/* Table - Use virtualization for large datasets */}
-        {table.getFilteredRowModel().rows.length > 100 ? (
-          <VirtualizedTable table={table} />
+        {table.getFilteredRowModel().rows.length > ZOOM_CONFIG.VIRTUALIZATION_THRESHOLD ? (
+          <VirtualizedTable table={table} zoom={debouncedZoom} />
         ) : (
           <div className="rounded-md border">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table 
+                className="w-full tabular-nums"
+                style={{
+                  transform: `scale(${debouncedZoom / 100})`,
+                  transformOrigin: 'top left',
+                  width: `${100 / (debouncedZoom / 100)}%`
+                }}>
                 <thead className="bg-muted/50">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
@@ -431,5 +710,16 @@ export function PlayerTable() {
         </div>
       </CardContent>
     </Card>
+    
+    {/* Player Assignment Modal */}
+    <PlayerAssignModal
+      player={selectedPlayer}
+      open={isAssignModalOpen}
+      onClose={() => {
+        setIsAssignModalOpen(false)
+        setSelectedPlayer(null)
+      }}
+    />
+    </>
   )
 }

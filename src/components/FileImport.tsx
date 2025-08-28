@@ -1,20 +1,21 @@
 import { useCallback, useState } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Upload, FileText } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { FileParser } from '@/lib/file-parser'
+import { Alert } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-react'
+import { FileUpload } from '@/components/ui/file-upload'
 
 export function FileImport() {
   const [progress, setProgress] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const setPlayers = useAppStore(state => state.setPlayers)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (!file) return
 
+    setError(null)
     setIsProcessing(true)
     setProgress(10)
 
@@ -46,51 +47,35 @@ export function FileImport() {
       }, 500)
     } catch (error) {
       console.error('Import failed:', error)
+      const message = (error instanceof Error && error.message) ? error.message : 'Failed to import file. Please ensure it is a valid FM export (HTML/CSV).'
+      setError(message)
       setIsProcessing(false)
       setProgress(0)
     }
   }, [setPlayers])
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'text/html': ['.html', '.htm'],
-      'text/csv': ['.csv'],
-    },
-    maxFiles: 1,
-    disabled: isProcessing,
-  })
-
   return (
-    <Card className={`transition-all ${isDragActive ? 'border-primary' : 'border-dashed'}`}>
-      <CardContent className="p-12">
-        <div
-          {...getRootProps()}
-          className={`text-center cursor-pointer ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
+    <div className="space-y-3">
+      <FileUpload
+        variant="dashed"
+        onDrop={onDrop}
+        accept={{ 'text/html': ['.html', '.htm'], 'text/csv': ['.csv'] }}
+        multiple={false}
+        disabled={isProcessing}
+        processing={isProcessing}
+        progress={progress}
+      />
+      {error && (
+        <Alert
+          variant="destructive"
+          icon={AlertCircle}
+          title="Import failed"
+          dismissible
+          onDismiss={() => setError(null)}
         >
-          <input {...getInputProps()} />
-          
-          {isProcessing ? (
-            <div className="space-y-4">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Processing file...</p>
-                <Progress value={progress} className="w-full max-w-xs mx-auto" />
-              </div>
-            </div>
-          ) : (
-            <>
-              <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-lg font-medium">
-                {isDragActive ? 'Drop the file here' : 'Drop file here or click to browse'}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Supports HTML and CSV files (max 20,000 players)
-              </p>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          {error}
+        </Alert>
+      )}
+    </div>
   )
 }

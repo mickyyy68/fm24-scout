@@ -86,3 +86,71 @@ export interface RoleScore {
   name: string
   score: number
 }
+
+// Re-export squad types
+export * from './squad'
+
+// ============ Advanced filtering & presets ============
+
+export type LogicalOperator = 'AND' | 'OR'
+
+export type NumericOperator = '>=' | '<=' | '>' | '<' | '=' | 'between'
+
+export type StringOperator = 'contains' | 'equals' | 'startsWith' | 'endsWith' | 'in'
+
+export type QueryField =
+  // Basic info
+  | 'Age'
+  | 'Position'
+  | 'Club'
+  | 'Nationality'
+  // Technical
+  | 'Cor' | 'Cro' | 'Dri' | 'Fin' | 'Fir' | 'Fla' | 'Hea' | 'Lon' | 'Mar' | 'Pas' | 'Tck' | 'Tec'
+  // Mental
+  | 'Agg' | 'Ant' | 'Bra' | 'Com' | 'Cmp' | 'Cnt' | 'Dec' | 'Det' | 'Ldr' | 'OtB' | 'Pos' | 'Tea' | 'Vis' | 'Wor'
+  // Physical
+  | 'Acc' | 'Agi' | 'Bal' | 'Jum' | 'Pac' | 'Sta' | 'Str'
+  // Goalkeeper
+  | '1v1' | 'Aer' | 'Cmd' | 'Han' | 'Kic' | 'Ref' | 'TRO' | 'Thr'
+  // Derived
+  | 'Speed' | 'WorkRate' | 'SetPieces'
+
+export interface NumericRule {
+  type: 'numeric'
+  field: QueryField
+  operator: NumericOperator
+  value: number
+  value2?: number // used when operator === 'between'
+}
+
+export interface StringRule {
+  type: 'string'
+  field: QueryField
+  operator: StringOperator
+  value: string | string[]
+  caseSensitive?: boolean
+}
+
+export type QueryRule = NumericRule | StringRule
+
+export interface QueryGroup {
+  op: LogicalOperator
+  rules: (QueryRule | QueryGroup)[]
+}
+
+export interface FilterPresetConfig {
+  globalText: string
+  columnFilters: any // ColumnFiltersState (kept generic to avoid tight coupling)
+  columnVisibility: Record<string, boolean>
+  queryGroup: QueryGroup | null
+  sorting?: any // SortingState
+  pageSize?: number
+}
+
+export interface FilterPreset {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  config: FilterPresetConfig
+}
