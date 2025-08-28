@@ -5,6 +5,25 @@ All notable changes to the FM24 Scout App will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-08-29
+
+### Added
+- Sidebar-based application layout with Players, Squad, and Settings pages
+- Collapsible sidebar with persistent active page (localStorage)
+- HextaUI-style File Upload component with variants and progress state
+- Alert component for error messaging below uploader
+- Self-hosted Figtree variable font, heading scale, and numeric tabular figures
+
+### Improved
+- Table readability: tabular numerals and emphasized role scores
+- Sidebar UX: collapse toggle remains visible; footer theme control alignment
+
+### Fixed
+- TypeScript errors in squad modules (unused imports/params, implicit anys)
+
+### Notes
+- Build requires Node.js 20.19+ or 22.12+ (per Vite requirements)
+
 ## [1.0.2] - 2025-08-26
 
 ### Added
