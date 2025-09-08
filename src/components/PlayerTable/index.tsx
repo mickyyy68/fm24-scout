@@ -512,7 +512,7 @@ export function PlayerTable() {
         <div className="flex items-center gap-4">
           <div className="flex-1 max-w-sm">
             <Input
-              placeholder="Search players..."
+              placeholder="Search name, club or position…"
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="w-full"
