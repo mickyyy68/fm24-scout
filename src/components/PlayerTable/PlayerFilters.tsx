@@ -76,6 +76,55 @@ export function PlayerFilters({ table }: PlayerFiltersProps) {
               />
             </div>
             <div>
+              <label className="text-sm font-medium">Max Price</label>
+              <Input
+                placeholder="e.g., 5M or 500K"
+                value={filters.maxPrice || ''}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value) {
+                    // Allow inputs like "5", "5m", "500k"
+                    const raw = value.trim()
+                    // Reuse lightweight parser here to interpret suffixes
+                    let n = 0
+                    const m = raw.toLowerCase().match(/^([0-9]*\.?[0-9]+)\s*([kmb])?$/)
+                    if (m) {
+                      const base = parseFloat(m[1])
+                      const suf = (m[2] || '').toLowerCase()
+                      if (suf === 'k') n = base * 1_000
+                      else if (suf === 'm' || suf === '') n = base * 1_000_000
+                      else if (suf === 'b') n = base * 1_000_000_000
+                    } else {
+                      // Fallback: treat plain number as millions
+                      const base = parseFloat(raw)
+                      n = isNaN(base) ? 0 : base * 1_000_000
+                    }
+
+                    const current = (table.getColumn('Price')?.getFilterValue() as any) || {}
+                    table.getColumn('Price')?.setFilterValue({
+                      ...current,
+                      max: n,
+                    })
+                    setFilters((prev) => ({ ...prev, maxPrice: value }))
+                  } else {
+                    const current = (table.getColumn('Price')?.getFilterValue() as any) || {}
+                    const { max, ...rest } = current
+                    if (Object.keys(rest).length > 0) {
+                      table.getColumn('Price')?.setFilterValue(rest)
+                    } else {
+                      table.getColumn('Price')?.setFilterValue(undefined)
+                    }
+                    setFilters((prev) => {
+                      const { maxPrice, ...r } = prev
+                      return r
+                    })
+                  }
+                }}
+                className="mt-1"
+              />
+              <div className="text-xs text-muted-foreground mt-1">Interprets bare numbers as millions.</div>
+            </div>
+            <div>
               <label className="text-sm font-medium">Min Age</label>
               <Input
                 type="number"

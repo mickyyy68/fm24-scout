@@ -34,10 +34,10 @@ import { VirtualizedTable } from './VirtualizedTable'
 import { Slider } from '@/components/ui/slider'
 import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
 import { PresetsMenu } from './PresetsMenu'
-import { QueryBuilderButton } from './QueryBuilderButton'
 import { useFilterStore } from '@/store/filter-store'
 import { evaluateGroup } from '@/lib/query'
 import type { QueryGroup, QueryRule, NumericRule } from '@/types'
+import { parsePriceToNumber } from '@/lib/price'
 
 // Zoom configuration constants
 const ZOOM_CONFIG = {
@@ -65,7 +65,7 @@ export function PlayerTable() {
     // GK
     '1v1','Aer','Cmd','Han','Kic','Ref','TRO','Thr',
     // Derived
-    'Speed','WorkRate','SetPieces',
+    'Speed','WorkRate','SetPieces','Price',
   ] as const, [])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     const initial: VisibilityState = { queryMatch: false }
@@ -308,6 +308,7 @@ export function PlayerTable() {
         if (key === 'Speed') return (((row.Pac ?? 0) as number) + ((row.Acc ?? 0) as number)) / 2
         if (key === 'WorkRate') return (((row.Wor ?? 0) as number) + ((row.Sta ?? 0) as number)) / 2
         if (key === 'SetPieces') return (((row.Cor ?? 0) as number) + ((row.Thr ?? 0) as number)) / 2
+        if (key === 'Price') return parsePriceToNumber(String((row as any)['Transfer Value'] ?? (row as any)['Value'] ?? ''))
         return Number((row as any)[key] ?? 0)
       },
       enableHiding: false, // keep out of Columns menu to avoid clutter
@@ -518,7 +519,6 @@ export function PlayerTable() {
             />
           </div>
           <PlayerFilters table={table} />
-          <QueryBuilderButton />
           <PresetsMenu 
             table={table}
             globalText={globalFilter}
