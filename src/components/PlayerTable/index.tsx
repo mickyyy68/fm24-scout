@@ -149,6 +149,9 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Name',
+        size: 200,
+        minSize: 160,
+        maxSize: 260,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -173,7 +176,7 @@ export function PlayerTable() {
           
           return (
             <div className="flex items-center gap-2">
-              <div className="font-medium flex-1">{player.Name}</div>
+              <div className="font-medium flex-1 overflow-hidden truncate">{player.Name}</div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -202,6 +205,9 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Age',
+        size: 60,
+        minSize: 50,
+        maxSize: 70,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -232,6 +238,9 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Club',
+        size: 150,
+        minSize: 110,
+        maxSize: 190,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -242,11 +251,14 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="max-w-[200px] truncate">{row.getValue('Club')}</div>
+          <div className="truncate">{row.getValue('Club')}</div>
         ),
       },
       {
         accessorKey: 'Position',
+        size: 140,
+        minSize: 100,
+        maxSize: 180,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -259,9 +271,9 @@ export function PlayerTable() {
         cell: ({ row }) => {
           const positions = String(row.getValue('Position')).split(',')
           return (
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1 overflow-hidden truncate whitespace-nowrap">
               {positions.map((pos, idx) => (
-                <Badge key={idx} variant="secondary" className="text-xs">
+                <Badge key={idx} variant="secondary" className="text-[10px] leading-tight px-1 py-0.5">
                   {pos.trim()}
                 </Badge>
               ))}
@@ -271,6 +283,9 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Value',
+        size: 140,
+        minSize: 110,
+        maxSize: 180,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -281,11 +296,14 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-right font-medium tabular-nums">{row.getValue('Value')}</div>
+          <div className="text-right font-medium tabular-nums truncate">{row.getValue('Value')}</div>
         ),
       },
       {
         accessorKey: 'Wage',
+        size: 140,
+        minSize: 110,
+        maxSize: 180,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -296,7 +314,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-right tabular-nums">{row.getValue('Wage')}</div>
+          <div className="text-right tabular-nums truncate">{row.getValue('Wage')}</div>
         ),
       },
     ]
@@ -601,7 +619,7 @@ export function PlayerTable() {
           <div className="rounded-md border">
             <div className="overflow-x-auto">
               <table 
-                className="w-full tabular-nums"
+                className="w-full tabular-nums table-fixed"
                 style={{
                   transform: `scale(${debouncedZoom / 100})`,
                   transformOrigin: 'top left',
@@ -613,7 +631,8 @@ export function PlayerTable() {
                       {headerGroup.headers.map((header) => (
                         <th
                           key={header.id}
-                          className="px-4 py-3 text-left text-sm font-medium"
+                          className="px-2 py-2 text-left text-sm font-medium"
+                          style={{ width: header.getSize() }}
                         >
                           {header.isPlaceholder
                             ? null
@@ -634,7 +653,7 @@ export function PlayerTable() {
                         className="border-t transition-colors hover:bg-muted/50"
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="px-4 py-3 text-sm">
+                          <td key={cell.id} className="px-2 py-2 text-sm" style={{ width: cell.column.getSize() }}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
