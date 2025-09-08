@@ -217,7 +217,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-center tabular-nums">{row.getValue('Age')}</div>
+          <div className="text-right tabular-nums">{row.getValue('Age')}</div>
         ),
         filterFn: (row, id, value) => {
           const age = row.getValue(id) as number
@@ -294,9 +294,28 @@ export function PlayerTable() {
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="text-right font-medium tabular-nums truncate">{row.getValue('Value')}</div>
-        ),
+        sortingFn: (rowA, rowB) => {
+          const aStr = String((rowA.original as any)['Transfer Value'] ?? (rowA.original as any)['Value'] ?? '')
+          const bStr = String((rowB.original as any)['Transfer Value'] ?? (rowB.original as any)['Value'] ?? '')
+          const a = parsePriceToNumber(aStr)
+          const b = parsePriceToNumber(bStr)
+          if (a === b) return 0
+          return a < b ? -1 : 1
+        },
+        cell: ({ row }) => {
+          const raw = String((row.original as any)['Transfer Value'] ?? (row.original as any)['Value'] ?? '')
+          const display = raw.replace(/\s*-\s*/g, ' – ')
+          const isNFS = /not for sale/i.test(display)
+          return (
+            <div className="text-right font-medium truncate" title={display}>
+              {isNFS ? (
+                <Badge variant="secondary" className="font-normal">Not for Sale</Badge>
+              ) : (
+                <span className="tabular-nums">{display}</span>
+              )}
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'Wage',
@@ -363,7 +382,7 @@ export function PlayerTable() {
         const score = row.original.roleScores?.[role.code] || 0
         const isBest = row.original.bestRole?.code === role.code
         return (
-          <div className={`text-center tabular-nums font-medium ${isBest ? 'font-bold text-primary' : ''}`}>
+          <div className={`text-right tabular-nums font-medium ${isBest ? 'font-bold text-primary' : ''}`}>
             {score.toFixed(1)}
           </div>
         )
