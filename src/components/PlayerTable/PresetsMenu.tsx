@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Save, Pencil, Trash2, Copy, Download } from 'lucide-react'
+import { Save, Trash2, Copy, Info, Check } from 'lucide-react'
 
 interface PresetsMenuProps {
   table: Table<Player>
@@ -18,7 +18,7 @@ interface PresetsMenuProps {
 }
 
 export function PresetsMenu({ table, globalText, setGlobalText, pageSize, setPageSize }: PresetsMenuProps) {
-  const { presets, selectedPresetId, addPreset, removePreset, duplicatePreset, renamePreset, selectPreset, currentQuery, setQuery } = useFilterStore()
+  const { presets, selectedPresetId, addPreset, removePreset, duplicatePreset, selectPreset, currentQuery, setQuery } = useFilterStore()
   const [name, setName] = useState('')
 
   const saveCurrent = () => {
@@ -34,19 +34,26 @@ export function PresetsMenu({ table, globalText, setGlobalText, pageSize, setPag
     selectPreset(preset.id)
   }
 
-  const copyJSON = async (preset: FilterPreset) => {
-    await navigator.clipboard.writeText(JSON.stringify(preset, null, 2))
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button
+          variant="outline"
+          size="sm"
+          title="Presets save search, filters, column visibility, sorting, page size, and query so you can restore them later."
+          aria-label="Open presets menu"
+        >
           Presets
           {selectedPresetId && <Badge variant="secondary" className="ml-2">{presets.find(p => p.id === selectedPresetId)?.name || 'Active'}</Badge>}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-96 p-4 space-y-3">
+        <div className="text-xs text-muted-foreground flex items-start gap-2">
+          <Info className="h-4 w-4 mt-0.5" />
+          <p>
+            Presets capture your current search, column filters/visibility, sorting, page size, and advanced query so you can quickly restore them later.
+          </p>
+        </div>
         <div className="space-y-2">
           <div className="text-sm font-medium">Save current as preset</div>
           <div className="flex gap-2">
@@ -58,7 +65,9 @@ export function PresetsMenu({ table, globalText, setGlobalText, pageSize, setPag
         <div className="space-y-2 max-h-80 overflow-y-auto">
           <div className="text-sm font-medium">Your presets</div>
           {presets.length === 0 && (
-            <div className="text-sm text-muted-foreground">No presets yet</div>
+            <div className="text-sm text-muted-foreground">
+              No presets yet. Presets let you store the current table setup and apply it later.
+            </div>
           )}
           {presets.map((p) => (
             <div key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-accent/50">
@@ -66,18 +75,13 @@ export function PresetsMenu({ table, globalText, setGlobalText, pageSize, setPag
                 <div className="font-medium text-sm">{p.name}</div>
                 <div className="text-xs text-muted-foreground">{new Date(p.updatedAt).toLocaleString()}</div>
               </button>
+              <Button variant="ghost" size="icon" title="Apply" onClick={() => applyPreset(p)}>
+                <Check className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" title="Duplicate" onClick={() => duplicatePreset(p.id)}>
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" title="Rename" onClick={() => {
-                const newName = prompt('New name', p.name)
-                if (newName) renamePreset(p.id, newName)
-              }}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" title="Copy JSON" onClick={() => copyJSON(p)}>
-                <Download className="h-4 w-4" />
-              </Button>
+              {/* Copy/Download JSON removed */}
               <Button variant="ghost" size="icon" title="Delete" onClick={() => removePreset(p.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>

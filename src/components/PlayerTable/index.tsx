@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Copy, UserPlus, UserCheck } from 'lucide-react'
+import { ArrowUpDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, UserPlus, UserCheck } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,7 +27,6 @@ import {
 import { useAppStore } from '@/store/app-store'
 import { useSquadStore } from '@/store/squad-store'
 import { Player } from '@/types'
-import { exportToCSV, exportToJSON } from './export-utils'
 import { PlayerFilters } from './PlayerFilters'
 import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
@@ -460,13 +459,7 @@ export function PlayerTable() {
     table.setColumnFilters([...base, ...mirrored])
   }, [currentQuery, table, NUMERIC_ATTR_KEYS, isMirrorableNumericAND, mapNumericToFilterValue])
 
-  const handleExportCSV = useCallback(() => {
-    exportToCSV(table.getFilteredRowModel().rows.map(r => r.original), visibleRoles)
-  }, [visibleRoles])
-
-  const handleExportJSON = useCallback(() => {
-    exportToJSON(table.getFilteredRowModel().rows.map(r => r.original))
-  }, [])
+  // Exports removed
 
   if (players.length === 0) {
     return null
@@ -504,24 +497,6 @@ export function PlayerTable() {
                 )}
               </div>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCSV}
-              disabled={players.length === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportJSON}
-              disabled={players.length === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export JSON
-            </Button>
           </div>
         </div>
       </CardHeader>
@@ -548,7 +523,7 @@ export function PlayerTable() {
           
           {/* Zoom Controls */}
           <div 
-            className="flex items-center gap-2 min-w-[200px]"
+            className="flex items-center gap-1 min-w-[140px]"
             role="group"
             aria-label="Table zoom controls"
           >
@@ -559,9 +534,9 @@ export function PlayerTable() {
               disabled={tableZoom <= ZOOM_CONFIG.MIN}
               title="Zoom out (Ctrl+-)"
               aria-label={`Zoom out (Current: ${tableZoom}%)`}
-              className="h-8 w-8 p-0"
+              className="h-6 w-6 p-0"
             >
-              <ZoomOut className="h-4 w-4" />
+              <ZoomOut className="h-3 w-3" />
             </Button>
             <Slider
               value={[tableZoom]}
@@ -569,7 +544,7 @@ export function PlayerTable() {
               max={ZOOM_CONFIG.MAX}
               min={ZOOM_CONFIG.MIN}
               step={ZOOM_CONFIG.STEP}
-              className="w-[100px]"
+              className="w-[70px]"
               aria-label="Table zoom level"
               aria-valuetext={`${tableZoom}% zoom`}
               aria-valuenow={tableZoom}
@@ -583,33 +558,21 @@ export function PlayerTable() {
               disabled={tableZoom >= ZOOM_CONFIG.MAX}
               title="Zoom in (Ctrl++)"
               aria-label={`Zoom in (Current: ${tableZoom}%)`}
-              className="h-8 w-8 p-0"
+              className="h-6 w-6 p-0"
             >
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="h-3 w-3" />
             </Button>
             <span 
-              className="text-sm text-muted-foreground min-w-[45px]"
+              className="text-xs text-muted-foreground min-w-[32px]"
               aria-live="polite"
               aria-atomic="true"
             >
               {tableZoom}%
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setTableZoom(ZOOM_CONFIG.DEFAULT)}
-              title="Reset zoom (Ctrl+0)"
-              aria-label={`Reset zoom to ${ZOOM_CONFIG.DEFAULT}%`}
-              className="h-8 w-8 p-0"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
+            {/* Reset zoom button removed */}
           </div>
           
-          {/* Keyboard shortcuts hint */}
-          <span className="text-xs text-muted-foreground">
-            Ctrl+/- to zoom
-          </span>
+          {/* Keyboard shortcuts hint removed */}
         </div>
 
         {/* Table - Use virtualization for large datasets */}
