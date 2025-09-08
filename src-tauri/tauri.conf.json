@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "FM24 Scout App",
+  "productName": "FM24 Scout",
   "version": "1.1.0",
   "identifier": "com.fm24scout.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "FM24 Scout App",
+        "title": "FM24 Scout",
         "width": 1400,
         "height": 900,
         "resizable": true,

@@ -31,7 +31,7 @@ export function AppLayout({ children, activePage = "players", onSelectPage }: Ap
           <div className={"flex items-center gap-3 " + (collapsed ? "" : "pr-8") }>
             <img
               className="rounded-ele bg-background border border-border shrink-0"
-              src="https://api.dicebear.com/9.x/glass/svg?seed=FM24"
+              src="/logo.png"
               width={35}
               height={35}
               alt="App"
