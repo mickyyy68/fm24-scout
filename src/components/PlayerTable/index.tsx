@@ -33,6 +33,7 @@ import { VirtualizedTable } from './VirtualizedTable'
 import { Slider } from '@/components/ui/slider'
 import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
 import { UpdatePlayerModal } from '@/components/Squad/UpdatePlayerModal'
+import { BatchUpdateModal } from '@/components/Squad/BatchUpdateModal'
 import { PresetsMenu } from './PresetsMenu'
 import { useFilterStore } from '@/store/filter-store'
 import { evaluateGroup } from '@/lib/query'
@@ -52,7 +53,7 @@ const ZOOM_CONFIG = {
 
 export function PlayerTable() {
   const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress, tableZoom, setTableZoom } = useAppStore()
-  const { isPlayerInSquad } = useSquadStore()
+  const { isPlayerInSquad, pendingUpdates, checkForUpdates, lastUpdated } = useSquadStore()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   // Hidden attribute columns for column-native filtering support
@@ -82,6 +83,12 @@ export function PlayerTable() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [updatePlayer, setUpdatePlayer] = useState<Player | null>(null)
   const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const [isBatchOpen, setIsBatchOpen] = useState(false)
+
+  // Keep pending updates fresh so the Update All button shows only when needed
+  useEffect(() => {
+    checkForUpdates(players)
+  }, [players, lastUpdated, checkForUpdates])
   
   // Helper: abbreviate role names (e.g., "Central Defender Defend" -> "CDD")
   const abbreviateRole = useCallback((name: string) => {
@@ -543,6 +550,12 @@ export function PlayerTable() {
                 )}
               </div>
             )}
+            {pendingUpdates.length > 0 && (
+              <Button variant="default" onClick={() => setIsBatchOpen(true)}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Update All
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -757,6 +770,8 @@ export function PlayerTable() {
         setUpdatePlayer(null)
       }}
     />
+    {/* Batch Update Modal */}
+    <BatchUpdateModal open={isBatchOpen} onClose={() => setIsBatchOpen(false)} />
     </>
   )
 }
