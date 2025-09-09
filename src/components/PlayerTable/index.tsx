@@ -80,6 +80,14 @@ export function PlayerTable() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   
+  // Helper: abbreviate role names (e.g., "Central Defender Defend" -> "CDD")
+  const abbreviateRole = useCallback((name: string) => {
+    if (!name) return ''
+    const cleaned = String(name).replace(/[^A-Za-z0-9\s-]/g, ' ').trim()
+    const parts = cleaned.split(/[\s-]+/).filter(Boolean)
+    return parts.map((p) => p[0]).join('').toUpperCase()
+  }, [])
+  
   // Helper: determine if query can be mirrored into native column filters (best UX)
   const isMirrorableNumericAND = useCallback((group: QueryGroup | null | undefined) => {
     if (!group || !Array.isArray(group.rules) || group.rules.length === 0) return false
@@ -375,10 +383,10 @@ export function PlayerTable() {
       accessorFn: (row) => row.roleScores?.[role.code] || 0,
       header: ({ column }) => (
         <div
-          className="flex items-center cursor-pointer select-none"
+          className="flex w-full items-center justify-end cursor-pointer select-none"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          <span className="truncate">{role.name}</span>
+          <span className="truncate" title={role.name}>{abbreviateRole(role.name)}</span>
           <ArrowUpDown className="ml-2 h-4 w-4 flex-shrink-0" />
         </div>
       ),
@@ -411,8 +419,8 @@ export function PlayerTable() {
         if (!bestRole) return null
         return (
           <div className="text-center">
-            <Badge variant="default" className="mb-1">
-              {bestRole.name}
+            <Badge variant="default" className="mb-1" title={bestRole.name}>
+              {abbreviateRole(bestRole.name)}
             </Badge>
             <div className="text-sm font-medium tabular-nums">{bestRole.score.toFixed(1)}</div>
           </div>

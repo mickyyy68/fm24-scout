@@ -13,7 +13,7 @@ const dataManager = new DataManager()
 
 export function RolePresetsMenu() {
   const { selectedRoles, visibleRoleColumns, addRole, clearRoles, setVisibleRoleColumns } = useAppStore()
-  const { rolePresets, selectedRolePresetId, addRolePreset, removeRolePreset, duplicateRolePreset, selectRolePreset, renameRolePreset } = useRolePresetStore()
+  const { rolePresets, selectedRolePresetId, addRolePreset, removeRolePreset, duplicateRolePreset, selectRolePreset } = useRolePresetStore()
   const [name, setName] = useState('')
 
   const selectedCodes = useMemo(() => selectedRoles.map(r => r.code), [selectedRoles])
@@ -102,4 +102,3 @@ export function RolePresetsMenu() {
     </DropdownMenu>
   )
 }
-
