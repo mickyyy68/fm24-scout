@@ -21,7 +21,11 @@ export function FormationPitch({
   const [hoveredPosition, setHoveredPosition] = useState<string | null>(null)
   
   return (
-    <div className={cn("relative w-full aspect-[2/3] min-h-[600px]", className)}>
+    <div className={cn(
+      // Make the pitch 50% smaller and keep it centered
+      "relative mx-auto w-1/2 aspect-[2/3] min-h-[300px]",
+      className
+    )}>
       {/* Football Pitch Background */}
       <div className="absolute inset-0 rounded-lg overflow-hidden">
         {/* Pitch gradient */}
@@ -99,7 +103,7 @@ export function FormationPitch({
                 isHovered && "scale-105 shadow-lg"
               )}
             >
-              <div className="p-2 min-w-[120px] text-center space-y-1">
+              <div className="p-1 min-w-[60px] text-center space-y-1">
                 {/* Position Type */}
                 <div className="text-xs font-bold text-muted-foreground">
                   {position.positionType}
