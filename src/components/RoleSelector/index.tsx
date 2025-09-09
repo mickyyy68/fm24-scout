@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -11,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, X, Search, Check, Eye, EyeOff, Settings } from 'lucide-react'
+import { Plus, Search, Check, Eye, EyeOff } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { DataManager } from '@/lib/data-manager'
 import { cn } from '@/lib/utils'
@@ -29,7 +28,6 @@ export function RoleSelector() {
   } = useAppStore()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [showColumnSettings, setShowColumnSettings] = useState(false)
   
   const allRoles = useMemo(() => dataManager.getAllRoles(), [])
   
@@ -102,23 +100,13 @@ export function RoleSelector() {
           <CardTitle>Role Selection & Table Columns</CardTitle>
           <div className="flex gap-2">
             {selectedRoles.length > 0 && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowColumnSettings(!showColumnSettings)}
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Column Settings
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearRoles}
-                >
-                  Clear All
-                </Button>
-              </>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearRoles}
+              >
+                Clear All
+              </Button>
             )}
           </div>
         </div>
@@ -129,12 +117,12 @@ export function RoleSelector() {
           <div>
             {selectedRoles.length === 0 ? (
               <p className="text-sm text-muted-foreground">No roles selected</p>
-            ) : showColumnSettings ? (
+            ) : (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground mb-2">
                   Choose which role columns to show in the table:
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {selectedRoles.map(role => {
                     const isVisible = visibleRoleColumns.includes(role.code)
                     return (
@@ -162,28 +150,6 @@ export function RoleSelector() {
                 <p className="text-xs text-muted-foreground mt-2">
                   {visibleRoleColumns.length} of {selectedRoles.length} columns visible in table
                 </p>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {selectedRoles.map(role => {
-                  const isVisible = visibleRoleColumns.includes(role.code)
-                  return (
-                    <Badge 
-                      key={role.code} 
-                      variant={isVisible ? "secondary" : "outline"}
-                      className="pl-3 pr-1"
-                    >
-                      {!isVisible && <EyeOff className="h-3 w-3 mr-1" />}
-                      {role.name}
-                      <button
-                        onClick={() => removeRole(role.code)}
-                        className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )
-                })}
               </div>
             )}
           </div>
@@ -241,7 +207,7 @@ export function RoleSelector() {
                       <h3 className="font-semibold text-sm mb-2 text-muted-foreground">
                         {group} ({roles.length})
                       </h3>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-4 gap-2">
                         {roles.map(role => {
                           const isSelected = selectedRoles.some(r => r.code === role.code)
                           return (
