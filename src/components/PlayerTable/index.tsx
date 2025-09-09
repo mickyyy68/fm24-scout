@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, UserPlus, UserCheck } from 'lucide-react'
+import { ArrowUpDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, UserPlus, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,7 @@ import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
 import { Slider } from '@/components/ui/slider'
 import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
+import { UpdatePlayerModal } from '@/components/Squad/UpdatePlayerModal'
 import { PresetsMenu } from './PresetsMenu'
 import { useFilterStore } from '@/store/filter-store'
 import { evaluateGroup } from '@/lib/query'
@@ -79,6 +80,8 @@ export function PlayerTable() {
   const debouncedZoom = useDebounce(tableZoom, ZOOM_CONFIG.DEBOUNCE_MS) // Debounce zoom for smooth performance
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [updatePlayer, setUpdatePlayer] = useState<Player | null>(null)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
   
   // Helper: abbreviate role names (e.g., "Central Defender Defend" -> "CDD")
   const abbreviateRole = useCallback((name: string) => {
@@ -181,6 +184,10 @@ export function PlayerTable() {
             setSelectedPlayer(player)
             setIsAssignModalOpen(true)
           }
+          const handleUpdatePlayer = () => {
+            setUpdatePlayer(player)
+            setIsUpdateOpen(true)
+          }
           
           return (
             <div className="flex items-center gap-2">
@@ -194,19 +201,27 @@ export function PlayerTable() {
               >
                 <Copy className="h-3 w-3" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={handleAddToSquad}
-                title={inSquad ? "Already in squad" : "Add to squad"}
-              >
-                {inSquad ? (
-                  <UserCheck className="h-3 w-3 text-green-500" />
-                ) : (
+              {inSquad ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleUpdatePlayer}
+                  title="Update player statistics"
+                >
+                  <RefreshCw className="h-3 w-3 text-primary" />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleAddToSquad}
+                  title="Add to squad"
+                >
                   <UserPlus className="h-3 w-3" />
-                )}
-              </Button>
+                </Button>
+              )}
             </div>
           )
         },
@@ -731,6 +746,15 @@ export function PlayerTable() {
       onClose={() => {
         setIsAssignModalOpen(false)
         setSelectedPlayer(null)
+      }}
+    />
+    {/* Update Player Modal */}
+    <UpdatePlayerModal
+      player={updatePlayer}
+      open={isUpdateOpen}
+      onClose={() => {
+        setIsUpdateOpen(false)
+        setUpdatePlayer(null)
       }}
     />
     </>
