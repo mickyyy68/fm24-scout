@@ -154,3 +154,18 @@ export interface FilterPreset {
   updatedAt: string
   config: FilterPresetConfig
 }
+
+// ============ Role presets ============
+
+export interface RolePresetConfig {
+  selectedRoleCodes: string[]
+  visibleRoleColumnCodes: string[]
+}
+
+export interface RolePreset {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  config: RolePresetConfig
+}

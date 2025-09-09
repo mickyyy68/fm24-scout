@@ -31,6 +31,8 @@ interface SquadState extends Squad {
   updatePlayerStatus: (playerId: string, positionId: string, status: PlayerStatus) => void
   reorderPlayersInPosition: (positionId: string, playerIds: string[]) => void
   movePlayerBetweenPositions: (playerId: string, fromPositionId: string, toPositionId: string) => void
+  updatePlayerFromLatest: (positionId: string, squadId: string, latest: Player) => void
+  findPositionsByPlayerName: (playerName: string) => { position: SquadPosition, player: SquadPlayer }[]
   
   // Squad Operations
   clearSquad: () => void
@@ -47,6 +49,7 @@ interface SquadState extends Squad {
   // Player Updates
   checkForUpdates: (importedPlayers: Player[]) => PlayerUpdateNotification[]
   applyPlayerUpdate: (update: PlayerUpdateNotification) => void
+  applyAllPendingUpdates: (importedPlayers: Player[]) => number
   dismissUpdate: (playerId: string) => void
   clearPendingUpdates: () => void
 }
@@ -67,11 +70,16 @@ export const useSquadStore = create<SquadState>()(
       // Formation Management
       setFormationTemplate: (template) => {
         set({
-          formation: template.map(pos => ({
-            ...pos,
-            id: pos.id || uuidv4(),
-            players: pos.players || []
-          })),
+          formation: template.map(pos => {
+            const role = pos.roleCode ? dataManager.getRoleByCode(pos.roleCode) : undefined
+            return {
+              ...pos,
+              id: pos.id || uuidv4(),
+              // Ensure human-readable role name is set based on roleCode
+              roleName: pos.roleName || role?.Role || '',
+              players: pos.players || []
+            }
+          }),
           lastUpdated: new Date().toISOString()
         })
       },
@@ -81,6 +89,7 @@ export const useSquadStore = create<SquadState>()(
           formation: [...state.formation, {
             ...position,
             id: uuidv4(),
+            roleName: position.roleName || dataManager.getRoleByCode(position.roleCode)?.Role || '',
             players: []
           }],
           lastUpdated: new Date().toISOString()
@@ -225,6 +234,43 @@ export const useSquadStore = create<SquadState>()(
           lastUpdated: new Date().toISOString()
         }))
       },
+
+      // Update a squad player's attributes from the latest dataset
+      updatePlayerFromLatest: (positionId, squadId, latest) => {
+        set(state => ({
+          formation: state.formation.map(pos => {
+            if (pos.id !== positionId) return pos
+            const newPlayers = pos.players.map(p => {
+              if (p.squadId !== squadId) return p
+              // Recalculate score for this position's current role
+              const positionScore = dataManager.calculatePlayerScore(latest, pos.roleCode)
+              return {
+                ...latest,
+                squadId: p.squadId,
+                status: p.status,
+                addedDate: p.addedDate,
+                positionScore,
+              } as SquadPlayer
+            })
+            return { ...pos, players: newPlayers }
+          }),
+          lastUpdated: new Date().toISOString()
+        }))
+      },
+
+      // Find all squad entries matching a player name
+      findPositionsByPlayerName: (playerName) => {
+        const results: { position: SquadPosition, player: SquadPlayer }[] = []
+        const formation = get().formation
+        formation.forEach(position => {
+          position.players.forEach(sp => {
+            if (sp.Name === playerName) {
+              results.push({ position, player: sp })
+            }
+          })
+        })
+        return results
+      },
       
       // Squad Operations
       clearSquad: () => {
@@ -276,7 +322,10 @@ export const useSquadStore = create<SquadState>()(
         set({
           version: data.version,
           squadName: data.squadName,
-          formation: data.formation,
+          formation: (data.formation || []).map(pos => ({
+            ...pos,
+            roleName: pos.roleName || dataManager.getRoleByCode(pos.roleCode)?.Role || ''
+          })),
           lastUpdated: data.lastUpdated,
           pendingUpdates: []
         })
@@ -329,36 +378,42 @@ export const useSquadStore = create<SquadState>()(
         return updates
       },
       
-      applyPlayerUpdate: (update) => {
-        const importedPlayers: Player[] = [] // This would come from the app store in practice
-        const playerToUpdate = importedPlayers.find(p => p.Name === update.playerName)
-        
-        if (playerToUpdate) {
+      applyPlayerUpdate: (_update) => {
+        // Deprecated path without dataset access; keep for compatibility
+        console.warn('applyPlayerUpdate called without dataset context; prefer updatePlayerFromLatest or applyAllPendingUpdates')
+      },
+
+      // Apply all pending updates using the provided dataset
+      applyAllPendingUpdates: (importedPlayers) => {
+        const pending = get().pendingUpdates
+        if (!pending || pending.length === 0) return 0
+        const updatedNames = new Set<string>()
+        pending.forEach(update => {
+          const latest = importedPlayers.find(p => p.Name === update.playerName)
+          if (!latest) return
+          // Update the specific player in its position
           set(state => ({
             formation: state.formation.map(pos => {
-              if (pos.id === update.positionId) {
+              if (pos.id !== update.positionId) return pos
+              const newPlayers = pos.players.map(p => {
+                if (p.squadId !== update.playerId) return p
+                const positionScore = dataManager.calculatePlayerScore(latest, pos.roleCode)
                 return {
-                  ...pos,
-                  players: pos.players.map(p => {
-                    if (p.squadId === update.playerId) {
-                      return {
-                        ...playerToUpdate,
-                        squadId: p.squadId,
-                        status: p.status,
-                        addedDate: p.addedDate,
-                        positionScore: update.newScore
-                      } as SquadPlayer
-                    }
-                    return p
-                  })
-                }
-              }
-              return pos
+                  ...latest,
+                  squadId: p.squadId,
+                  status: p.status,
+                  addedDate: p.addedDate,
+                  positionScore,
+                } as SquadPlayer
+              })
+              return { ...pos, players: newPlayers }
             }),
-            pendingUpdates: state.pendingUpdates.filter(u => u.playerId !== update.playerId),
             lastUpdated: new Date().toISOString()
           }))
-        }
+          updatedNames.add(update.playerName)
+        })
+        set({ pendingUpdates: [] })
+        return updatedNames.size
       },
       
       dismissUpdate: (playerId) => {

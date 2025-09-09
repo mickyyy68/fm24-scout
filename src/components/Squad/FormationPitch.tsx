@@ -21,7 +21,10 @@ export function FormationPitch({
   const [hoveredPosition, setHoveredPosition] = useState<string | null>(null)
   
   return (
-    <div className={cn("relative w-full aspect-[2/3] min-h-[600px]", className)}>
+    <div className={cn(
+      "relative mx-auto w-[65%] aspect-[2/3] min-h-[300px]",
+      className
+    )}>
       {/* Football Pitch Background */}
       <div className="absolute inset-0 rounded-lg overflow-hidden">
         {/* Pitch gradient */}
@@ -75,6 +78,8 @@ export function FormationPitch({
         const isSelected = selectedPositionId === position.id
         const hasPlayers = position.players.length > 0
         const firstPlayer = position.players[0]
+        const baseScale = hasPlayers ? 0.8 : 1
+        const scale = isHovered ? baseScale * 1.05 : baseScale
         
         return (
           <div
@@ -96,10 +101,11 @@ export function FormationPitch({
                 "border-2",
                 isSelected && "border-primary ring-2 ring-primary/20",
                 !isSelected && "border-border hover:border-primary/50",
-                isHovered && "scale-105 shadow-lg"
+                isHovered && "shadow-lg"
               )}
+              style={{ transform: `scale(${scale})` }}
             >
-              <div className="p-2 min-w-[120px] text-center space-y-1">
+              <div className="p-1 min-w-[60px] text-center space-y-1">
                 {/* Position Type */}
                 <div className="text-xs font-bold text-muted-foreground">
                   {position.positionType}

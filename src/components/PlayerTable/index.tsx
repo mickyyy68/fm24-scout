@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, UserPlus, UserCheck } from 'lucide-react'
+import { ArrowUpDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, UserPlus, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,8 @@ import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
 import { Slider } from '@/components/ui/slider'
 import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
+import { UpdatePlayerModal } from '@/components/Squad/UpdatePlayerModal'
+import { BatchUpdateModal } from '@/components/Squad/BatchUpdateModal'
 import { PresetsMenu } from './PresetsMenu'
 import { useFilterStore } from '@/store/filter-store'
 import { evaluateGroup } from '@/lib/query'
@@ -51,7 +53,7 @@ const ZOOM_CONFIG = {
 
 export function PlayerTable() {
   const { players, selectedRoles, visibleRoleColumns, isCalculating, calculateScores, calculationProgress, tableZoom, setTableZoom } = useAppStore()
-  const { isPlayerInSquad } = useSquadStore()
+  const { isPlayerInSquad, pendingUpdates, checkForUpdates, lastUpdated } = useSquadStore()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   // Hidden attribute columns for column-native filtering support
@@ -79,6 +81,22 @@ export function PlayerTable() {
   const debouncedZoom = useDebounce(tableZoom, ZOOM_CONFIG.DEBOUNCE_MS) // Debounce zoom for smooth performance
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [updatePlayer, setUpdatePlayer] = useState<Player | null>(null)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const [isBatchOpen, setIsBatchOpen] = useState(false)
+
+  // Keep pending updates fresh so the Update All button shows only when needed
+  useEffect(() => {
+    checkForUpdates(players)
+  }, [players, lastUpdated, checkForUpdates])
+  
+  // Helper: abbreviate role names (e.g., "Central Defender Defend" -> "CDD")
+  const abbreviateRole = useCallback((name: string) => {
+    if (!name) return ''
+    const cleaned = String(name).replace(/[^A-Za-z0-9\s-]/g, ' ').trim()
+    const parts = cleaned.split(/[\s-]+/).filter(Boolean)
+    return parts.map((p) => p[0]).join('').toUpperCase()
+  }, [])
   
   // Helper: determine if query can be mirrored into native column filters (best UX)
   const isMirrorableNumericAND = useCallback((group: QueryGroup | null | undefined) => {
@@ -173,6 +191,10 @@ export function PlayerTable() {
             setSelectedPlayer(player)
             setIsAssignModalOpen(true)
           }
+          const handleUpdatePlayer = () => {
+            setUpdatePlayer(player)
+            setIsUpdateOpen(true)
+          }
           
           return (
             <div className="flex items-center gap-2">
@@ -186,19 +208,27 @@ export function PlayerTable() {
               >
                 <Copy className="h-3 w-3" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={handleAddToSquad}
-                title={inSquad ? "Already in squad" : "Add to squad"}
-              >
-                {inSquad ? (
-                  <UserCheck className="h-3 w-3 text-green-500" />
-                ) : (
+              {inSquad ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleUpdatePlayer}
+                  title="Update player statistics"
+                >
+                  <RefreshCw className="h-3 w-3 text-primary" />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleAddToSquad}
+                  title="Add to squad"
+                >
                   <UserPlus className="h-3 w-3" />
-                )}
-              </Button>
+                </Button>
+              )}
             </div>
           )
         },
@@ -375,10 +405,10 @@ export function PlayerTable() {
       accessorFn: (row) => row.roleScores?.[role.code] || 0,
       header: ({ column }) => (
         <div
-          className="flex items-center cursor-pointer select-none"
+          className="flex w-full items-center justify-end cursor-pointer select-none"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          <span className="truncate">{role.name}</span>
+          <span className="truncate" title={role.name}>{abbreviateRole(role.name)}</span>
           <ArrowUpDown className="ml-2 h-4 w-4 flex-shrink-0" />
         </div>
       ),
@@ -411,8 +441,8 @@ export function PlayerTable() {
         if (!bestRole) return null
         return (
           <div className="text-center">
-            <Badge variant="default" className="mb-1">
-              {bestRole.name}
+            <Badge variant="default" className="mb-1" title={bestRole.name}>
+              {abbreviateRole(bestRole.name)}
             </Badge>
             <div className="text-sm font-medium tabular-nums">{bestRole.score.toFixed(1)}</div>
           </div>
@@ -519,6 +549,12 @@ export function PlayerTable() {
                   </div>
                 )}
               </div>
+            )}
+            {pendingUpdates.length > 0 && (
+              <Button variant="default" onClick={() => setIsBatchOpen(true)}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Update All
+              </Button>
             )}
           </div>
         </div>
@@ -725,6 +761,17 @@ export function PlayerTable() {
         setSelectedPlayer(null)
       }}
     />
+    {/* Update Player Modal */}
+    <UpdatePlayerModal
+      player={updatePlayer}
+      open={isUpdateOpen}
+      onClose={() => {
+        setIsUpdateOpen(false)
+        setUpdatePlayer(null)
+      }}
+    />
+    {/* Batch Update Modal */}
+    <BatchUpdateModal open={isBatchOpen} onClose={() => setIsBatchOpen(false)} />
     </>
   )
 }
