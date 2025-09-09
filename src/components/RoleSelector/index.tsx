@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Search, Check, Eye, EyeOff } from 'lucide-react'
+import { Plus, Search, Check, Eye, EyeOff, X } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { DataManager } from '@/lib/data-manager'
 import { cn } from '@/lib/utils'
@@ -131,18 +131,32 @@ export function RoleSelector() {
                         className="flex items-center justify-between p-2 border rounded-md"
                       >
                         <span className="text-sm truncate mr-2">{role.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleRoleColumnVisibility(role.code)}
-                          className="h-auto p-1"
-                        >
-                          {isVisible ? (
-                            <Eye className="h-4 w-4 text-primary" />
-                          ) : (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleRoleColumnVisibility(role.code)}
+                            className="h-auto p-1"
+                            aria-label={isVisible ? 'Hide column' : 'Show column'}
+                            title={isVisible ? 'Hide column' : 'Show column'}
+                          >
+                            {isVisible ? (
+                              <Eye className="h-4 w-4 text-primary" />
+                            ) : (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeRole(role.code)}
+                            className="h-auto p-1 text-destructive"
+                            aria-label="Remove role"
+                            title="Remove role"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )
                   })}
