@@ -5,6 +5,30 @@ All notable changes to the FM24 Scout App will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-09-09
+
+### Added
+- Player Table: MoneyCell for Value/Wage with compact currency formatting and correct numeric sorting via `parsePriceToNumber`.
+- Filters: Max Price filter powered by a hidden numeric `Price` column and robust price parsing (ranges, K/M suffixes, Free).
+- Role Selector: RolePresetsMenu to save/load role presets and role abbreviation helper.
+- Squad: BatchUpdateModal and UpdatePlayerModal to review and apply player updates.
+
+### Changed
+- Player Table: Enhanced Value display and sorting; improved column sizing/truncation; clearer search placeholder.
+- Squad: Improved position selection and display; FormationPitch scaling tweaks; Position card UI adjustments.
+- Branding: Refreshed app icon and name across web and Tauri; updated `index.html` and icon assets.
+
+### Removed
+- Legacy Query Builder component/button.
+- PlayerTable export utilities.
+
+### Docs
+- Updated guidelines to reflect Query Builder removal and price parsing usage.
+
+### Technical
+- New utilities/stores: `src/lib/price.ts`, `src/store/role-preset-store.ts`.
+- Tauri config and icon set updated. Tag `v1.2.0` triggers CI to build desktop bundles and upload them to the release draft.
+
 ## [1.1.0] - 2025-08-29
 
 ### Added
