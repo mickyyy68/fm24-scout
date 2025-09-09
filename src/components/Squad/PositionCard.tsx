@@ -26,7 +26,6 @@ import { RoleData } from '@/types'
 interface PositionCardProps {
   position: SquadPosition
   onEditPosition?: () => void
-  onAddPlayer?: () => void
   className?: string
   /** When true, renders without the outer Card wrapper for embedding */
   bare?: boolean
@@ -34,8 +33,6 @@ interface PositionCardProps {
 
 export function PositionCard({ 
   position, 
-  onEditPosition: _onEditPosition,
-  onAddPlayer,
   className,
   bare = false,
 }: PositionCardProps) {
@@ -158,15 +155,6 @@ export function PositionCard({
             <p className="text-sm">No players assigned</p>
           </div>
         )}
-        
-        {/* Add Player Button */}
-        <Button 
-          variant="outline" 
-          className="w-full"
-          onClick={onAddPlayer}
-        >
-          Add Player
-        </Button>
       </ContentComp>
     </Container>
   )

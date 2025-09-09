@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSquadStore } from '@/store/squad-store'
-import { useAppStore } from '@/store/app-store'
 import { FormationPitch } from './FormationPitch'
 import { PositionCard } from './PositionCard'
-import { PlayerAssignModal } from './PlayerAssignModal'
 import { SquadPosition } from '@/types/squad'
 import { formations, getFormationNames } from '@/data/formations'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,8 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { 
-  Download, 
-  Upload, 
   Users, 
   Trophy,
   Edit,
@@ -37,17 +33,11 @@ export function Squad() {
     setFormationTemplate,
     getSquadPlayerCount,
     getStartingEleven,
-    exportSquad,
-    importSquad,
     clearSquad
   } = useSquadStore()
   
-  const { players } = useAppStore()
-  
   // Track only the selected position id to keep in sync with store updates
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null)
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
-  const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [editingName, setEditingName] = useState(false)
   const [tempSquadName, setTempSquadName] = useState(squadName)
   
@@ -78,35 +68,6 @@ export function Squad() {
     }
   }
   
-  const handleExport = () => {
-    const squadData = exportSquad()
-    const blob = new Blob([JSON.stringify(squadData, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${squadName.replace(/\s+/g, '_')}_squad.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-  
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target?.result as string)
-          importSquad(data)
-        } catch (error) {
-          console.error('Failed to import squad:', error)
-        }
-      }
-      reader.readAsText(file)
-    }
-  }
-  
   const handleSaveName = () => {
     setSquadName(tempSquadName)
     setEditingName(false)
@@ -115,8 +76,6 @@ export function Squad() {
   const handlePositionClick = (position: SquadPosition) => {
     setSelectedPositionId(position.id)
   }
-  
-  // Note: Position-specific "Add Player" action is handled inline where used
   
   return (
     <div className="space-y-6">
@@ -199,25 +158,6 @@ export function Squad() {
               </SelectContent>
             </Select>
             
-            {/* Actions */}
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Squad
-            </Button>
-            
-            <Button variant="outline" size="sm" asChild>
-              <label>
-                <Upload className="h-4 w-4 mr-2" />
-                Import Squad
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImport}
-                  className="hidden"
-                />
-              </label>
-            </Button>
-            
             <Button variant="outline" size="sm" onClick={clearSquad}>
               Clear Squad
             </Button>
@@ -280,10 +220,6 @@ export function Squad() {
                           key={position.id}
                           position={position}
                           onEditPosition={() => setSelectedPositionId(position.id)}
-                          onAddPlayer={() => {
-                            setSelectedPositionId(position.id)
-                            setIsAssignModalOpen(true)
-                          }}
                           bare
                         />
                       )
@@ -295,18 +231,6 @@ export function Squad() {
           </Card>
         </div>
       </div>
-      
-      {/* Player Assignment Modal */}
-      {players.length > 0 && (
-        <PlayerAssignModal
-          player={selectedPlayer}
-          open={isAssignModalOpen}
-          onClose={() => {
-            setIsAssignModalOpen(false)
-            setSelectedPlayer(null)
-          }}
-        />
-      )}
     </div>
   )
 }
