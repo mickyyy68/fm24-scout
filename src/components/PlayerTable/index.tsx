@@ -37,6 +37,7 @@ import { useFilterStore } from '@/store/filter-store'
 import { evaluateGroup } from '@/lib/query'
 import type { QueryGroup, QueryRule, NumericRule } from '@/types'
 import { parsePriceToNumber } from '@/lib/price'
+import { MoneyCell } from './MoneyCell'
 
 // Zoom configuration constants
 const ZOOM_CONFIG = {
@@ -287,7 +288,7 @@ export function PlayerTable() {
         maxSize: 180,
         header: ({ column }) => (
           <div
-            className="flex items-center cursor-pointer select-none"
+            className="flex w-full items-center justify-end cursor-pointer select-none"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             <span>Value</span>
@@ -304,17 +305,7 @@ export function PlayerTable() {
         },
         cell: ({ row }) => {
           const raw = String((row.original as any)['Transfer Value'] ?? (row.original as any)['Value'] ?? '')
-          const display = raw.replace(/\s*-\s*/g, ' – ')
-          const isNFS = /not for sale/i.test(display)
-          return (
-            <div className="text-right font-medium truncate" title={display}>
-              {isNFS ? (
-                <Badge variant="secondary" className="font-normal">Not for Sale</Badge>
-              ) : (
-                <span className="tabular-nums">{display}</span>
-              )}
-            </div>
-          )
+          return <MoneyCell raw={raw} title={raw} />
         },
       },
       {
@@ -324,16 +315,29 @@ export function PlayerTable() {
         maxSize: 180,
         header: ({ column }) => (
           <div
-            className="flex items-center cursor-pointer select-none"
+            className="flex w-full items-center justify-end cursor-pointer select-none"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             <span>Wage</span>
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="text-right tabular-nums truncate">{row.getValue('Wage')}</div>
-        ),
+        sortingFn: (rowA, rowB) => {
+          const aRaw = String((rowA.original as any)['Wage'] ?? '')
+          const bRaw = String((rowB.original as any)['Wage'] ?? '')
+          const clean = (s: string) => s.replace(/\s*p\/?a\s*$/i, '').trim()
+          const a = parsePriceToNumber(clean(aRaw))
+          const b = parsePriceToNumber(clean(bRaw))
+          if (a === b) return 0
+          return a < b ? -1 : 1
+        },
+        cell: ({ row }) => {
+          const raw = String(row.getValue('Wage') ?? '')
+          // Strip a trailing p/a if present and show it as a muted suffix
+          const cleaned = raw.replace(/\s*p\/?a\s*$/i, '').trim()
+          const hasSuffix = /p\/?a$/i.test(raw.trim())
+          return <MoneyCell raw={cleaned} title={raw} suffix={hasSuffix ? 'p/a' : undefined} />
+        },
       },
     ]
 
