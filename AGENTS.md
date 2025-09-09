@@ -18,16 +18,22 @@
   - Hidden evaluator column: `queryMatch` applies `currentQuery` via `src/lib/query.ts` (AND/OR evaluator with derived metrics).
   - Hidden numeric attribute columns: all numeric and derived attributes exist as hidden columns to support native column filters (range object: `{min?:number, max?:number}` or a single number meaning `>=`). They are excluded from the Columns menu to avoid clutter and excluded from presets.
   - Mirroring for UX: If a query is a flat AND of numeric rules only, rules are mirrored into native column filters and `queryMatch` is disabled. Otherwise (OR, nested, or string rules), mirrored filters are cleared and `queryMatch` is enabled.
-  - Query Builder: `src/components/PlayerTable/QueryBuilder.tsx` syncs with `currentQuery` on open. Trigger: `QueryBuilderButton` in the table header.
+  - Monetary columns: Value and Wage use `MoneyCell` (`src/components/PlayerTable/MoneyCell.tsx`) for compact currency formatting and proper numeric sorting via `parsePriceToNumber`.
+  - No Query Builder UI: the legacy Query Builder component/button was removed. Advanced queries are still supported through `currentQuery` (set programmatically or restored from presets) and mirrored into native numeric filters when possible (see “Mirroring for UX”).
 
 Guidelines
 - When adding new derived metrics, update both `src/lib/query.ts` (evaluation) and PlayerTable’s hidden attribute columns.
 - Keep internal columns (`queryMatch`, hidden numeric keys) out of preset `columnVisibility` and out of the Columns dropdown.
 - Programmatic filters example: `table.getColumn('Pac')?.setFilterValue({ min: 15 })` or `table.getColumn('Age')?.setFilterValue({ max: 25 })`.
 
+Price parsing and hidden Price column
+- Use `parsePriceToNumber` (`src/lib/price.ts`) for all monetary comparisons/sorting. It understands `€10M – €14.5M`, `£850K`, `7.2m`, `500k`, `Free`, and `-`.
+- Ranges use the upper bound to make “Max Price” filters conservative; “Free” maps to 0; unknowns map to `Infinity`.
+- The hidden numeric `Price` column in PlayerTable is derived from `Transfer Value` or `Value` and exists solely to power native filters (e.g., a Max Price control).
+
 ## Presets UI
 - Component: `src/components/PlayerTable/PresetsMenu.tsx`.
-- Save/load/manage (duplicate, rename, delete, copy JSON). Applying a preset also restores the saved `currentQuery`.
+- Save/load/manage (duplicate, delete). Applying a preset also restores the saved `currentQuery`.
 - Presets include: global search text, column filters, column visibility (sans internals), sorting, page size, and the advanced query.
 
 ## Charts

@@ -12,7 +12,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw, Copy, UserPlus, UserCheck } from 'lucide-react'
+import { ArrowUpDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Copy, UserPlus, UserCheck } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,17 +27,17 @@ import {
 import { useAppStore } from '@/store/app-store'
 import { useSquadStore } from '@/store/squad-store'
 import { Player } from '@/types'
-import { exportToCSV, exportToJSON } from './export-utils'
 import { PlayerFilters } from './PlayerFilters'
 import { ColumnVisibilityToggle } from './ColumnVisibilityToggle'
 import { VirtualizedTable } from './VirtualizedTable'
 import { Slider } from '@/components/ui/slider'
 import { PlayerAssignModal } from '@/components/Squad/PlayerAssignModal'
 import { PresetsMenu } from './PresetsMenu'
-import { QueryBuilderButton } from './QueryBuilderButton'
 import { useFilterStore } from '@/store/filter-store'
 import { evaluateGroup } from '@/lib/query'
 import type { QueryGroup, QueryRule, NumericRule } from '@/types'
+import { parsePriceToNumber } from '@/lib/price'
+import { MoneyCell } from './MoneyCell'
 
 // Zoom configuration constants
 const ZOOM_CONFIG = {
@@ -65,7 +65,7 @@ export function PlayerTable() {
     // GK
     '1v1','Aer','Cmd','Han','Kic','Ref','TRO','Thr',
     // Derived
-    'Speed','WorkRate','SetPieces',
+    'Speed','WorkRate','SetPieces','Price',
   ] as const, [])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     const initial: VisibilityState = { queryMatch: false }
@@ -149,6 +149,9 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Name',
+        size: 200,
+        minSize: 160,
+        maxSize: 260,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -173,7 +176,7 @@ export function PlayerTable() {
           
           return (
             <div className="flex items-center gap-2">
-              <div className="font-medium flex-1">{player.Name}</div>
+              <div className="font-medium flex-1 overflow-hidden truncate">{player.Name}</div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -202,6 +205,9 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Age',
+        size: 60,
+        minSize: 50,
+        maxSize: 70,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -212,7 +218,7 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="text-center tabular-nums">{row.getValue('Age')}</div>
+          <div className="text-right tabular-nums">{row.getValue('Age')}</div>
         ),
         filterFn: (row, id, value) => {
           const age = row.getValue(id) as number
@@ -232,6 +238,9 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Club',
+        size: 150,
+        minSize: 110,
+        maxSize: 190,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -242,11 +251,14 @@ export function PlayerTable() {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="max-w-[200px] truncate">{row.getValue('Club')}</div>
+          <div className="truncate">{row.getValue('Club')}</div>
         ),
       },
       {
         accessorKey: 'Position',
+        size: 140,
+        minSize: 100,
+        maxSize: 180,
         header: ({ column }) => (
           <div
             className="flex items-center cursor-pointer select-none"
@@ -259,9 +271,9 @@ export function PlayerTable() {
         cell: ({ row }) => {
           const positions = String(row.getValue('Position')).split(',')
           return (
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1 overflow-hidden truncate whitespace-nowrap">
               {positions.map((pos, idx) => (
-                <Badge key={idx} variant="secondary" className="text-xs">
+                <Badge key={idx} variant="secondary" className="text-[10px] leading-tight px-1 py-0.5">
                   {pos.trim()}
                 </Badge>
               ))}
@@ -271,33 +283,61 @@ export function PlayerTable() {
       },
       {
         accessorKey: 'Value',
+        size: 140,
+        minSize: 110,
+        maxSize: 180,
         header: ({ column }) => (
           <div
-            className="flex items-center cursor-pointer select-none"
+            className="flex w-full items-center justify-end cursor-pointer select-none"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             <span>Value</span>
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="text-right font-medium tabular-nums">{row.getValue('Value')}</div>
-        ),
+        sortingFn: (rowA, rowB) => {
+          const aStr = String((rowA.original as any)['Transfer Value'] ?? (rowA.original as any)['Value'] ?? '')
+          const bStr = String((rowB.original as any)['Transfer Value'] ?? (rowB.original as any)['Value'] ?? '')
+          const a = parsePriceToNumber(aStr)
+          const b = parsePriceToNumber(bStr)
+          if (a === b) return 0
+          return a < b ? -1 : 1
+        },
+        cell: ({ row }) => {
+          const raw = String((row.original as any)['Transfer Value'] ?? (row.original as any)['Value'] ?? '')
+          return <MoneyCell raw={raw} title={raw} />
+        },
       },
       {
         accessorKey: 'Wage',
+        size: 140,
+        minSize: 110,
+        maxSize: 180,
         header: ({ column }) => (
           <div
-            className="flex items-center cursor-pointer select-none"
+            className="flex w-full items-center justify-end cursor-pointer select-none"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
             <span>Wage</span>
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="text-right tabular-nums">{row.getValue('Wage')}</div>
-        ),
+        sortingFn: (rowA, rowB) => {
+          const aRaw = String((rowA.original as any)['Wage'] ?? '')
+          const bRaw = String((rowB.original as any)['Wage'] ?? '')
+          const clean = (s: string) => s.replace(/\s*p\/?a\s*$/i, '').trim()
+          const a = parsePriceToNumber(clean(aRaw))
+          const b = parsePriceToNumber(clean(bRaw))
+          if (a === b) return 0
+          return a < b ? -1 : 1
+        },
+        cell: ({ row }) => {
+          const raw = String(row.getValue('Wage') ?? '')
+          // Strip a trailing p/a if present and show it as a muted suffix
+          const cleaned = raw.replace(/\s*p\/?a\s*$/i, '').trim()
+          const hasSuffix = /p\/?a$/i.test(raw.trim())
+          return <MoneyCell raw={cleaned} title={raw} suffix={hasSuffix ? 'p/a' : undefined} />
+        },
       },
     ]
 
@@ -308,6 +348,7 @@ export function PlayerTable() {
         if (key === 'Speed') return (((row.Pac ?? 0) as number) + ((row.Acc ?? 0) as number)) / 2
         if (key === 'WorkRate') return (((row.Wor ?? 0) as number) + ((row.Sta ?? 0) as number)) / 2
         if (key === 'SetPieces') return (((row.Cor ?? 0) as number) + ((row.Thr ?? 0) as number)) / 2
+        if (key === 'Price') return parsePriceToNumber(String((row as any)['Transfer Value'] ?? (row as any)['Value'] ?? ''))
         return Number((row as any)[key] ?? 0)
       },
       enableHiding: false, // keep out of Columns menu to avoid clutter
@@ -345,7 +386,7 @@ export function PlayerTable() {
         const score = row.original.roleScores?.[role.code] || 0
         const isBest = row.original.bestRole?.code === role.code
         return (
-          <div className={`text-center tabular-nums font-medium ${isBest ? 'font-bold text-primary' : ''}`}>
+          <div className={`text-right tabular-nums font-medium ${isBest ? 'font-bold text-primary' : ''}`}>
             {score.toFixed(1)}
           </div>
         )
@@ -441,13 +482,7 @@ export function PlayerTable() {
     table.setColumnFilters([...base, ...mirrored])
   }, [currentQuery, table, NUMERIC_ATTR_KEYS, isMirrorableNumericAND, mapNumericToFilterValue])
 
-  const handleExportCSV = useCallback(() => {
-    exportToCSV(table.getFilteredRowModel().rows.map(r => r.original), visibleRoles)
-  }, [visibleRoles])
-
-  const handleExportJSON = useCallback(() => {
-    exportToJSON(table.getFilteredRowModel().rows.map(r => r.original))
-  }, [])
+  // Exports removed
 
   if (players.length === 0) {
     return null
@@ -485,24 +520,6 @@ export function PlayerTable() {
                 )}
               </div>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCSV}
-              disabled={players.length === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportJSON}
-              disabled={players.length === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export JSON
-            </Button>
           </div>
         </div>
       </CardHeader>
@@ -511,14 +528,13 @@ export function PlayerTable() {
         <div className="flex items-center gap-4">
           <div className="flex-1 max-w-sm">
             <Input
-              placeholder="Search players..."
+              placeholder="Search name, club or position…"
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="w-full"
             />
           </div>
           <PlayerFilters table={table} />
-          <QueryBuilderButton />
           <PresetsMenu 
             table={table}
             globalText={globalFilter}
@@ -530,7 +546,7 @@ export function PlayerTable() {
           
           {/* Zoom Controls */}
           <div 
-            className="flex items-center gap-2 min-w-[200px]"
+            className="flex items-center gap-1 min-w-[140px]"
             role="group"
             aria-label="Table zoom controls"
           >
@@ -541,9 +557,9 @@ export function PlayerTable() {
               disabled={tableZoom <= ZOOM_CONFIG.MIN}
               title="Zoom out (Ctrl+-)"
               aria-label={`Zoom out (Current: ${tableZoom}%)`}
-              className="h-8 w-8 p-0"
+              className="h-6 w-6 p-0"
             >
-              <ZoomOut className="h-4 w-4" />
+              <ZoomOut className="h-3 w-3" />
             </Button>
             <Slider
               value={[tableZoom]}
@@ -551,7 +567,7 @@ export function PlayerTable() {
               max={ZOOM_CONFIG.MAX}
               min={ZOOM_CONFIG.MIN}
               step={ZOOM_CONFIG.STEP}
-              className="w-[100px]"
+              className="w-[70px]"
               aria-label="Table zoom level"
               aria-valuetext={`${tableZoom}% zoom`}
               aria-valuenow={tableZoom}
@@ -565,33 +581,21 @@ export function PlayerTable() {
               disabled={tableZoom >= ZOOM_CONFIG.MAX}
               title="Zoom in (Ctrl++)"
               aria-label={`Zoom in (Current: ${tableZoom}%)`}
-              className="h-8 w-8 p-0"
+              className="h-6 w-6 p-0"
             >
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="h-3 w-3" />
             </Button>
             <span 
-              className="text-sm text-muted-foreground min-w-[45px]"
+              className="text-xs text-muted-foreground min-w-[32px]"
               aria-live="polite"
               aria-atomic="true"
             >
               {tableZoom}%
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setTableZoom(ZOOM_CONFIG.DEFAULT)}
-              title="Reset zoom (Ctrl+0)"
-              aria-label={`Reset zoom to ${ZOOM_CONFIG.DEFAULT}%`}
-              className="h-8 w-8 p-0"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
+            {/* Reset zoom button removed */}
           </div>
           
-          {/* Keyboard shortcuts hint */}
-          <span className="text-xs text-muted-foreground">
-            Ctrl+/- to zoom
-          </span>
+          {/* Keyboard shortcuts hint removed */}
         </div>
 
         {/* Table - Use virtualization for large datasets */}
@@ -601,7 +605,7 @@ export function PlayerTable() {
           <div className="rounded-md border">
             <div className="overflow-x-auto">
               <table 
-                className="w-full tabular-nums"
+                className="w-full tabular-nums table-fixed"
                 style={{
                   transform: `scale(${debouncedZoom / 100})`,
                   transformOrigin: 'top left',
@@ -613,7 +617,8 @@ export function PlayerTable() {
                       {headerGroup.headers.map((header) => (
                         <th
                           key={header.id}
-                          className="px-4 py-3 text-left text-sm font-medium"
+                          className="px-2 py-2 text-left text-sm font-medium"
+                          style={{ width: header.getSize() }}
                         >
                           {header.isPlaceholder
                             ? null
@@ -634,7 +639,7 @@ export function PlayerTable() {
                         className="border-t transition-colors hover:bg-muted/50"
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="px-4 py-3 text-sm">
+                          <td key={cell.id} className="px-2 py-2 text-sm" style={{ width: cell.column.getSize() }}>
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
