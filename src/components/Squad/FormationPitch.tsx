@@ -22,8 +22,7 @@ export function FormationPitch({
   
   return (
     <div className={cn(
-      // Make the pitch 50% smaller and keep it centered
-      "relative mx-auto w-1/2 aspect-[2/3] min-h-[300px]",
+      "relative mx-auto w-[65%] aspect-[2/3] min-h-[300px]",
       className
     )}>
       {/* Football Pitch Background */}

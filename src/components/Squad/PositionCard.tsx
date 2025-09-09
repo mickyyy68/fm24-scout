@@ -28,13 +28,16 @@ interface PositionCardProps {
   onEditPosition?: () => void
   onAddPlayer?: () => void
   className?: string
+  /** When true, renders without the outer Card wrapper for embedding */
+  bare?: boolean
 }
 
 export function PositionCard({ 
   position, 
   onEditPosition: _onEditPosition,
   onAddPlayer,
-  className 
+  className,
+  bare = false,
 }: PositionCardProps) {
   const { 
     removePlayerFromPosition, 
@@ -73,52 +76,65 @@ export function PositionCard({
     updatePlayerStatus(playerId, position.id, newStatus)
   }
   
+  const Container: any = bare ? 'div' : Card
+  const HeaderComp: any = bare ? 'div' : CardHeader
+  const ContentComp: any = bare ? 'div' : CardContent
+
   return (
-    <Card className={cn("w-full", className)}>
-      <CardHeader className="pb-3">
+    <Container className={cn("w-full", className)}>
+      <HeaderComp className={cn("pb-3", bare ? "p-0" : undefined)}>
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="text-base">
               {POSITION_DISPLAY_NAMES[position.positionType]}
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full">
               {editingRole ? (
-                <Select value={position.roleCode} onValueChange={handleRoleChange}>
-                  <SelectTrigger className="h-7 w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map(role => (
-                      <SelectItem key={role.RoleCode} value={role.RoleCode}>
-                        {role.Role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2 w-full">
+                  <Select value={position.roleCode} onValueChange={handleRoleChange}>
+                    <SelectTrigger className="h-7 w-[220px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map(role => (
+                        <SelectItem key={role.RoleCode} value={role.RoleCode}>
+                          {role.Role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="ml-auto">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingRole(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               ) : (
-                <>
+                <div className="flex items-center gap-2 w-full">
                   <Badge variant="outline" className="text-xs">
-                    {position.roleName}
+                    {position.roleName || (roles.find(r => r.RoleCode === position.roleCode)?.Role ?? position.roleCode.toUpperCase())}
                   </Badge>
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 ml-auto"
                     onClick={() => setEditingRole(true)}
                   >
-                    <Edit className="h-3 w-3" />
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Role
                   </Button>
-                </>
+                </div>
               )}
             </div>
           </div>
-          <Badge variant="secondary">
-            {position.players.length} / ∞
-          </Badge>
         </div>
-      </CardHeader>
+      </HeaderComp>
       
-      <CardContent className="space-y-2">
+      <ContentComp className={cn("space-y-2", bare ? "p-0" : undefined)}>
         {/* Player List */}
         {position.players.length > 0 ? (
           <div className="space-y-2">
@@ -151,8 +167,8 @@ export function PositionCard({
         >
           Add Player
         </Button>
-      </CardContent>
-    </Card>
+      </ContentComp>
+    </Container>
   )
 }
 

@@ -67,11 +67,16 @@ export const useSquadStore = create<SquadState>()(
       // Formation Management
       setFormationTemplate: (template) => {
         set({
-          formation: template.map(pos => ({
-            ...pos,
-            id: pos.id || uuidv4(),
-            players: pos.players || []
-          })),
+          formation: template.map(pos => {
+            const role = pos.roleCode ? dataManager.getRoleByCode(pos.roleCode) : undefined
+            return {
+              ...pos,
+              id: pos.id || uuidv4(),
+              // Ensure human-readable role name is set based on roleCode
+              roleName: pos.roleName || role?.Role || '',
+              players: pos.players || []
+            }
+          }),
           lastUpdated: new Date().toISOString()
         })
       },
@@ -81,6 +86,7 @@ export const useSquadStore = create<SquadState>()(
           formation: [...state.formation, {
             ...position,
             id: uuidv4(),
+            roleName: position.roleName || dataManager.getRoleByCode(position.roleCode)?.Role || '',
             players: []
           }],
           lastUpdated: new Date().toISOString()
@@ -276,7 +282,10 @@ export const useSquadStore = create<SquadState>()(
         set({
           version: data.version,
           squadName: data.squadName,
-          formation: data.formation,
+          formation: (data.formation || []).map(pos => ({
+            ...pos,
+            roleName: pos.roleName || dataManager.getRoleByCode(pos.roleCode)?.Role || ''
+          })),
           lastUpdated: data.lastUpdated,
           pendingUpdates: []
         })
