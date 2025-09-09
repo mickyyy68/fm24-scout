@@ -14,6 +14,7 @@ import { Plus, Search, Check, Eye, EyeOff, X } from 'lucide-react'
 import { useAppStore } from '@/store/app-store'
 import { DataManager } from '@/lib/data-manager'
 import { cn } from '@/lib/utils'
+import { RolePresetsMenu } from './RolePresetsMenu'
 
 const dataManager = new DataManager()
 
@@ -99,6 +100,7 @@ export function RoleSelector() {
         <div className="flex items-center justify-between">
           <CardTitle>Role Selection & Table Columns</CardTitle>
           <div className="flex gap-2">
+            <RolePresetsMenu />
             {selectedRoles.length > 0 && (
               <Button
                 variant="ghost"
